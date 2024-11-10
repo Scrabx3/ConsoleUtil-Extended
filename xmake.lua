@@ -18,8 +18,7 @@ option_end()
 
 -- Dependencies & Includes
 -- https://github.com/xmake-io/xmake-repo/tree/dev    
-add_requires("magic_enum", "nlohmann_json", "directxtk", "rapidcsv", "xbyak", "catch2", "simpleini", "yaml-cpp")
-add_requires("spdlog", { configs = { header_only = false, wchar = true, std_format = true } })
+add_requires("magic_enum", "yaml-cpp")
 
 includes("lib/commonlibsse-ng")
 
@@ -38,7 +37,7 @@ elseif is_mode("release") then
   set_symbols("debug")
 end
 
-set_config("skse_xbyak", true)
+-- set_config("skse_xbyak", true)
 -- set_config("skyrim_se", true)
 -- set_config("skyrim_ae", true)
 -- set_config("skyrim_vr", true)
@@ -46,14 +45,14 @@ set_config("skse_xbyak", true)
 -- Target
 target(PROJECT_NAME)
   -- Dependencies
-  add_packages("magic_enum", "nlohmann_json", "directxtk", "rapidcsv", "xbyak", "catch2", "simpleini", "yaml-cpp")
+  add_packages("magic_enum", "yaml-cpp")
 
   -- CommonLibSSE
   add_deps("commonlibsse-ng")
   add_rules("commonlibsse-ng.plugin", {
       name = PROJECT_NAME,
       author = "Scrab Joséline",
-      description = "Extended implementation of Mfg Fix with new functions and animated expression transitions."
+      description = "Framework to register new, custom console commands via Papyrus using .yaml config files."
     })
 
   -- Source files

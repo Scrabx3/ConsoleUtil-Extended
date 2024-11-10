@@ -1,35 +1,33 @@
 #pragma once
 
-#include <new>
-void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line);
-void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags,
-	unsigned debugFlags, const char* file, int line);
-
 #pragma warning(push)
-#	define SKSE_SUPPORT_XBYAK
-#	include "RE/Skyrim.h"
-#	include "SKSE/SKSE.h"
-#	include <xbyak/xbyak.h>
-
-#ifdef NDEBUG
-#	include <spdlog/sinks/basic_file_sink.h>
-#else
-#	include <spdlog/sinks/msvc_sink.h>
-#endif
-
+#pragma warning(disable : 4200)
+#include "RE/Skyrim.h"
+#include "SKSE/SKSE.h"
 #pragma warning(pop)
 
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#include <atomic>
+#include <unordered_map>
+#include <unordered_set>
 
-#include "SimpleMath.h"
-#include "yaml-cpp/yaml.h"
-#include <magic_enum.hpp>
-#include <nlohmann/json.hpp>
+#pragma warning(push)
+#ifdef NDEBUG
+#include <spdlog/sinks/basic_file_sink.h>
+#else
+#include <spdlog/sinks/msvc_sink.h>
+#endif
+#pragma warning(pop)
 
-using json = nlohmann::json;
-using namespace std::literals;
 namespace logger = SKSE::log;
+namespace fs = std::filesystem;
+using namespace std::literals;
+
+#include <yaml-cpp/yaml.h>
+#include <magic_enum.hpp>
+static_assert(magic_enum::is_magic_enum_supported, "magic_enum is not supported");
+
+#define REL_ID(se, ae) REL::RelocationID(se, ae)
+#define REL_OF(se, ae, vr) REL::VariantOffset(se, ae, vr)
 
 namespace stl
 {
@@ -78,11 +76,6 @@ namespace stl
 	{
 		write_vfunc<F, 0, T>();
 	}
-}
-
-namespace stl
-{
-	using namespace SKSE::stl;
 
 	[[nodiscard]] constexpr std::string_view safe_string(const char* a_str) noexcept
 	{
