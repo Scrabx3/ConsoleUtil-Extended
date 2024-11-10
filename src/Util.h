@@ -55,7 +55,7 @@ namespace C3::Util
 
 	inline std::string GetEditorID(RE::TESForm* a_form)
 	{
-		static auto tweaks = GetModuleHandle(L"po3_Tweaks");
+		static auto tweaks = GetModuleHandle("po3_Tweaks");
 		static auto func = reinterpret_cast<_GetFormEditorID>(GetProcAddress(tweaks, "GetFormEditorID"));
 		if (func) {
 			return func(a_form->formID);
