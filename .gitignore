@@ -1,6 +1,7 @@
 build/
-dist/
-.vs*/
-CMakeUserPresets.json
+.vscode/
+.vs/
+dist/SKSE/
+dist/Scripts/
 .xmake/
 .release/
