@@ -3,11 +3,34 @@
 #include "C3/Commands.h"
 #include "Papyrus/Events.h"
 
-using namespace C3;
+namespace C3
+{
+	std::vector<RE::BSFixedString> Hooks::GetMessages(size_t n)
+	{
+		std::vector<RE::BSFixedString> msgs{};
+		msgs.reserve(n);
 
+		auto iter = _MsgHistoryIter;
+		for (size_t i = 0; i < min(n, MAX_MSG_HISTORY); i++) {
+			auto it = *iter;
+			if (it.empty()) {
+				break;
+			}
+			msgs.push_back(it);
+			if (++iter == _MsgHistory.end()) {
+				iter = _MsgHistory.begin();
+			}
+		}
+		return msgs;
+	}
+	
 void Hooks::CompileAndRun(RE::Script* a_script, RE::ScriptCompiler* a_compiler, RE::COMPILER_NAME a_name, RE::TESObjectREFR* a_targetRef)
 {
 	auto cmd = a_script->GetCommand();
+	if (++_MsgHistoryIter == _MsgHistory.end()) {
+		_MsgHistoryIter = _MsgHistory.begin();
+	}
+	*_MsgHistoryIter = cmd;
 
 	Papyrus::Events::EventManager::GetSingleton()->_ConsoleCommand.QueueEvent(
 			[=](const Papyrus::Events::ConsoleCommand_Filter& a_filter) {
@@ -20,7 +43,6 @@ void Hooks::CompileAndRun(RE::Script* a_script, RE::ScriptCompiler* a_compiler, 
 	_CompileAndRun(a_script, a_compiler, a_name, a_targetRef);
 }
 
-
 void Hooks::Install()
 {
 	SKSE::AllocTrampoline(1 << 4);
@@ -31,3 +53,4 @@ void Hooks::Install()
 
 	logger::info("Installed hooks");
 }
+}	 // namespace C3
