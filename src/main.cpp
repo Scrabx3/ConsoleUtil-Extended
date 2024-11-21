@@ -1,5 +1,8 @@
 #include "C3/Hooks/Hooks.h"
 #include "C3/Commands.h"
+#include "Serialization/Serialization.h"
+#include "Papyrus/Events.h"
+#include "Papyrus/Functions.h"
 
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
 {
@@ -40,10 +43,27 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	}
 
 	SKSE::Init(a_skse);
+	logger::info("{} loaded", plugin->GetName());
+
 	C3::Hooks::Install();
 	C3::Commands::Load();
 
-	logger::info("{} loaded", plugin->GetName());
+	const auto papyrus = SKSE::GetPapyrusInterface();
+	if (!papyrus) {
+		logger::critical("Failed to get papyurs interface");
+		return false;
+	}
+	papyrus->Register(Papyrus::Functions::Register);
+	papyrus->Register(Papyrus::Events::Register);
+
+	const auto serialization = SKSE::GetSerializationInterface();
+	serialization->SetUniqueID(Serialization::RecordID);
+	serialization->SetSaveCallback(Serialization::Serializer::SaveCallback);
+	serialization->SetLoadCallback(Serialization::Serializer::LoadCallback);
+	serialization->SetRevertCallback(Serialization::Serializer::RevertCallback);
+	serialization->SetFormDeleteCallback(Serialization::Serializer::FormDeleteCallback);
+
+	logger::info("Initialization complete");
 
 	return true;
 }

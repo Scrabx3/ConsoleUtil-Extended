@@ -87,4 +87,9 @@ namespace Papyrus::Events
 		}
 	};
 
+  inline bool Register(VM* a_vm)
+  {
+    ConsoleCommand::Register(a_vm);
+    return true;
+  }
 }	 // namespace Papyrus::Events
