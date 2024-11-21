@@ -17,7 +17,7 @@ void Commands::Load()
 
 		auto path = entry.path();
 		
-		if (path.extension() == ".yaml" || path.extension() == ".yaml") {
+		if (path.extension() == ".yaml" || path.extension() == ".yml") {
 			try {
 				YAML::Node node = YAML::LoadFile(path.string());
 				auto command = node.as<Command>();
