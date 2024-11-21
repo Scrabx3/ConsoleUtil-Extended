@@ -1,5 +1,6 @@
 #include "Commands.h"
 #include "Util.h"
+#include "Util/StringUtil.h"
 
 using namespace C3;
 namespace fs = std::filesystem;
@@ -99,11 +100,11 @@ bool Commands::Parse(const std::string& a_command, RE::TESObjectREFR* a_ref)
 					break;
 				}
 
-				if (token.starts_with("-") && !Util::IsNumeric(token)) {
+				if (token.starts_with("-") && !StringUtil::IsNumericString(token)) {
 					if (auto arg = sub->GetFlag(token)) {
 						if (arg->flag) {
 							flags[arg->name] = "true";
-						} else if ((i + 1) < tokens.size() && !tokens[i + 1].starts_with("--") && (!tokens[i + 1].starts_with("-")) || Util::IsNumeric(tokens[i + 1])) {
+						} else if ((i + 1) < tokens.size() && !tokens[i + 1].starts_with("--") && (!tokens[i + 1].starts_with("-")) || StringUtil::IsNumericString(tokens[i + 1])) {
 							flags[arg->name] = tokens[i + 1];
 							logger::info("adding {} to flags", tokens[i + 1]);
 							i++;
@@ -194,7 +195,7 @@ bool Commands::Parse(const std::string& a_command, RE::TESObjectREFR* a_ref)
 					ret = std::to_string(a_var.GetFloat());
 					break;
 				case RawType::kBool:
-					ret = Util::BoolToString(a_var.GetBool());
+					ret = a_var.GetBool() ? "true" : "false";
 					break;
 				default:
 					// TODO: handle arrays

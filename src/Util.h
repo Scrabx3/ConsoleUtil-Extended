@@ -1,7 +1,9 @@
 #pragma
 
-#include "Command.h"
-#include "Script.h"
+#include "C3/Command.h"
+#include "Util/Script.h"
+#include "Util/StringUtil.h"
+#include "Util/FormLookup.h"
 
 namespace C3::Util
 {
@@ -27,32 +29,6 @@ namespace C3::Util
 		}
 	}
 
-	inline bool IsNumeric(std::string a_str)
-	{
-		static const std::regex pattern(R"(^[+-]?(?:\d+|\d*\.\d+)$)");
-		return std::regex_match(a_str, pattern);
-	}
-
-	inline std::string Lowercase(const char* a_str)
-	{
-		std::string data{ a_str };
-
-		std::transform(data.begin(), data.end(), data.begin(),
-			[](unsigned char c) { return (char)std::tolower(c); });
-
-		return data;
-	}
-
-	inline std::string Lowercase(std::string_view a_str)
-	{
-		std::string data{ a_str };
-
-		std::transform(data.begin(), data.end(), data.begin(),
-			[](unsigned char c) { return (char)std::tolower(c); });
-
-		return data;
-	}
-
 	inline std::string GetEditorID(RE::TESForm* a_form)
 	{
 		static auto tweaks = GetModuleHandle("po3_Tweaks");
@@ -61,33 +37,6 @@ namespace C3::Util
 			return func(a_form->formID);
 		}
 		return {};
-	}
-
-	inline bool IsEditorID(const std::string_view identifier) { return std::strchr(identifier.data(), '|') == nullptr; }
-	
-	inline std::pair<RE::FormID, std::string> GetFormIDAndPluginName(const std::string_view a_str)
-	{
-		if (const auto tilde{ std::strchr(a_str.data(), '|') }) {
-			const auto tilde_pos{ static_cast<int>(tilde - a_str.data()) };
-			return { std::stoi(std::string{ a_str.substr(0, tilde_pos) }, 0, 16), a_str.substr(tilde_pos + 1).data() };
-		}
-
-		return { 0, "" };
-	}
-
-	inline std::string BoolToString(bool b)
-	{
-		return b ? "true" : "false";
-	}
-
-	inline RE::TESForm* StringToForm(std::string_view a_str)
-	{
-		if (const auto form = RE::TESForm::LookupByEditorID(a_str)) {
-			return form;
-		}
-
-		const auto& [formId, modName] = GetFormIDAndPluginName(a_str);
-		return RE::TESDataHandler::GetSingleton()->LookupForm(formId, modName);
 	}
 
 	class VmCallback : public RE::BSScript::IStackCallbackFunctor
@@ -106,13 +55,8 @@ namespace C3::Util
 			onResult(onResult_) {}
 
 	private:
-		void operator()(RE::BSScript::Variable result) override
-		{
-			onResult(result);
-		}
-
+		void operator()(RE::BSScript::Variable result) override		{			onResult(result);		}
 		bool CanSave() const override { return false; }
-
 		void SetObject(const RE::BSTSmartPointer<RE::BSScript::Object>&) override {}
 
 		const OnResult onResult;
@@ -156,7 +100,7 @@ namespace C3::Util
 					case Arg::Type::Object:
 						{
 							const auto& objType = arg.rawType;
-							const auto& normalised = Lowercase(objType);
+							const auto& normalised = StringUtil::CastLower(objType);
 
 							RE::TESForm* form = nullptr;
 
@@ -165,8 +109,10 @@ namespace C3::Util
 							} else {
 								if (objType == "actor" && val == "player") {
 									form = RE::PlayerCharacter::GetSingleton();
+								} else if (auto tmp = RE::TESForm::LookupByEditorID(val)) {
+									form = tmp;
 								} else {
-									form = StringToForm(val);
+									form = Utility::FormFromString<RE::TESForm>(val);
 								}
 							}
 
@@ -179,12 +125,12 @@ namespace C3::Util
 							}
 							logger::info("Form is {} {}", form->GetFormID(), GetEditorID(form));
 
-							auto object = Script::GetObjectPtr(form, objType.c_str());
+							auto object = Script::GetScriptObject(form, objType.c_str());
 
 							logger::info("Found {} ptr {}", objType, object != nullptr);
 							
 							if (!object) {
-								object = Script::GetObjectPtr(form, "form");
+								object = Script::GetScriptObject(form, "form");
 								logger::info("Found {} ptr {}", objType, object != nullptr);
 							}
 
@@ -200,11 +146,11 @@ namespace C3::Util
 								auto newType = object->type;
 								auto type = object->GetTypeInfo();
 
-								while (type && Lowercase(type->GetName()) != normalised) {
+								while (type && StringUtil::CastLower(type->GetName()) != normalised) {
 									type = type->GetParent();
 								}
 
-								if (type && type != object->type.get() && Lowercase(type->GetName()) == normalised) {
+								if (type && type != object->type.get() && StringUtil::CastLower(type->GetName()) == normalised) {
 
 									_typeOverrides.emplace_back(object->type);
 									_overriden.push_back(object);
