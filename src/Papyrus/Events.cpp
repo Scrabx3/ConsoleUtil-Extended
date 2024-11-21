@@ -34,13 +34,13 @@ namespace Papyrus::Events
 
 	void EventManager::Save(SKSE::SerializationInterface* a_intfc, std::uint32_t a_version)
 	{
-		_ConsoleCommand.Save(a_intfc, 'coco', a_version);
+		_ConsoleCommand.Save(a_intfc, ConsoleCommand, a_version);
 	}
 
 	void EventManager::Load(SKSE::SerializationInterface* a_intfc, std::uint32_t a_type)
 	{
 		switch (a_type) {
-		case 'coco':
+		case ConsoleCommand:
 			_ConsoleCommand.Load(a_intfc);
 			break;
 		default:

@@ -25,6 +25,11 @@ namespace Papyrus::Events
   class EventManager :
     public Singleton<EventManager>
   {
+    enum : std::uint32_t
+    {
+      ConsoleCommand = 'coco',
+    };
+
   public:
 		SKSE::RegistrationMapConditional<ConsoleCommand_Filter, RE::BSFixedString, const RE::TESObjectREFR*> _ConsoleCommand{ "OnConsoleCommand"sv };
 
