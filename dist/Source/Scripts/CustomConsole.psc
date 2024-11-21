@@ -13,11 +13,11 @@ String[] Function GetConsoleMessages(int n) native global
 ; If partial match is true, you will receive any command that contains the specified command, otherwise only exact matches will be received
 ; Leading and trailing whitespaces are ignored
 Function RegisterForConsoleCommand(Form akForm, String asCommand, bool abPartialMatch) native global
-Function RegisterForConsoleCommand_Alias(ReferenceAlias akAlias, String asCommand, bool abPartialMatch) native global
-Function RegisterForConsoleCommand_MgEff(MagicEffekct akMagicEffect, String asCommand, bool abPartialMatch) native global
+Function RegisterForConsoleCommand_Alias(Alias akAlias, String asCommand, bool abPartialMatch) native global
+Function RegisterForConsoleCommand_MgEff(MagicEffect akMagicEffect, String asCommand, bool abPartialMatch) native global
 Function UnregisterForConsoleCommand(Form akForm, String asCommand) native global
-Function UnregisterForConsoleCommand_Alias(ReferenceAlias akAlias, String asCommand) native global
-Function UnregisterForConsoleCommand_MgEff(MagicEffekct akMagicEffect, String asCommand) native global
+Function UnregisterForConsoleCommand_Alias(Alias akAlias, String asCommand) native global
+Function UnregisterForConsoleCommand_MgEff(MagicEffect akMagicEffect, String asCommand) native global
 
 Event OnConsoleCommand(String asCommand, ObjectReference akTargetReference)
 EndEvent
