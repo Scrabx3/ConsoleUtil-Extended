@@ -26,12 +26,24 @@ namespace StringUtil
 	}
 
 #undef STR_TRANSFORM
-
-  template <class T>
-	inline std::vector<T> StringSplit(T& a_str, std::string_view a_delimiter)
+  
+	inline std::vector<std::string_view> StringSplit(const std::string_view& a_view, const std::string_view& a_delim)
 	{
-		auto range = a_str | std::ranges::views::split(a_delimiter);
-		return { range.begin(), range.end() };
+		namespace views = std::ranges::views;
+		return a_view | views::split(a_delim) | views::transform([](auto&& subrange) {
+			auto word = std::string_view(&*subrange.begin(), std::ranges::distance(subrange));
+			while (!word.empty() && std::isspace(word.front()))
+				word.remove_prefix(1);
+			while (!word.empty() && std::isspace(word.back()))
+				word.remove_suffix(1);
+			return word;
+		}) | views::filter([](auto&& word) { return !word.empty(); }) | std::ranges::to<std::vector>();
+	}
+
+	inline std::vector<std::string> StringSplitToOwned(const std::string_view& a_view, const std::string_view& a_delim)
+	{
+		const auto ret = StringSplit(a_view, a_delim);
+		return std::vector<std::string>(ret.cbegin(), ret.cend());
 	}
 
   template <class T>
