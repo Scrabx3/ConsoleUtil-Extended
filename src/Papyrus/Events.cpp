@@ -11,26 +11,35 @@ namespace Papyrus::Events
 
 	bool ConsoleCommand_Filter::Load(SKSE::SerializationInterface* a_intfc)
 	{
-    std::string out{};
-		if (stl::read_string(a_intfc, out)) {
-			filterCmd = out;
-			return true;
-		} else {
+    std::string cmd{};
+		if (!stl::read_string(a_intfc, cmd))
+			return false;
+		filterCmd = cmd;
+		if (!a_intfc->ReadRecordData(partialMatch))
+			return false;
+		RE::FormID out;
+		if (!a_intfc->ReadRecordData(out))
+			return false;
+		if (!a_intfc->ResolveFormID(out, out))
+			return false;
+		filterRef = RE::TESForm::LookupByID(out)->As<RE::TESObjectREFR>();
+		if (!filterRef) {
+			logger::warn("Failed to resolve form id ({})", out);
 			return false;
 		}
-		return a_intfc->ReadRecordData(partialMatch);
+		return true;
 	}
 
 	bool ConsoleCommand_Filter::Save(SKSE::SerializationInterface* a_intfc) const
 	{
-		return stl::write_string(a_intfc, filterCmd) && a_intfc->WriteRecordData(partialMatch);
+		return stl::write_string(a_intfc, filterCmd) && a_intfc->WriteRecordData(partialMatch) && a_intfc->WriteRecordData(filterRef->formID);
 	}
 
 	bool ConsoleCommand_Filter::operator<(const ConsoleCommand_Filter& a_rhs) const
 	{
-		return std::string_view{ filterCmd } < std::string_view{ a_rhs.filterCmd };
+		using svtie = std::tuple<std::string_view, const RE::TESObjectREFR*>;
+		return svtie{ filterCmd, filterRef } < svtie{ a_rhs.filterCmd, a_rhs.filterRef };
 	}
-
 
 	void EventManager::Save(SKSE::SerializationInterface* a_intfc, std::uint32_t a_version)
 	{
