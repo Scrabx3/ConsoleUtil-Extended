@@ -6,7 +6,7 @@ Function PrintConsole(String asText) native global
 ; Execute the given command in the console
 Function ExecuteCommand(String asCommand, ObjectReference akTargetReference) native global
 
-; Get the last n console messages. The stack has a maximum size of 128 messages
+; Get the last n console messages. The stack has a maximum size of 128 messages and only includes messages send by the player
 String[] Function GetConsoleMessages(int n) native global
 
 ; Register to receive an event if the specified console command is used
