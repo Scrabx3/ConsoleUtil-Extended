@@ -15,6 +15,7 @@ namespace C3
 		inline static REL::Relocation<decltype(CompileAndRun)> _CompileAndRun;
 
 		static inline std::array<RE::BSFixedString, MAX_MSG_HISTORY> _MsgHistory{};
-		static inline decltype(_MsgHistory)::iterator _MsgHistoryIter = _MsgHistory.begin();
+		static inline decltype(_MsgHistory)::iterator _MsgHead = _MsgHistory.begin();
+		static inline decltype(_MsgHistory)::iterator _MsgTail = _MsgHistory.begin();
 	};
 }	 // namespace C3

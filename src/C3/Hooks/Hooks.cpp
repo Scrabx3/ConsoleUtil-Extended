@@ -10,15 +10,14 @@ namespace C3
 		std::vector<RE::BSFixedString> msgs{};
 		msgs.reserve(n);
 
-		auto iter = _MsgHistoryIter;
-		for (size_t i = 0; i < min(n, MAX_MSG_HISTORY); i++) {
-			auto it = *iter;
-			if (it.empty()) {
-				break;
-			}
-			msgs.push_back(it);
+		auto iter = _MsgTail;
+		for (size_t i = 0; i < n; ++i) {
+			msgs.push_back(*iter);
 			if (++iter == _MsgHistory.end()) {
 				iter = _MsgHistory.begin();
+			}
+			if (iter == _MsgHead) {
+				break;
 			}
 		}
 		return msgs;
@@ -27,10 +26,15 @@ namespace C3
 void Hooks::CompileAndRun(RE::Script* a_script, RE::ScriptCompiler* a_compiler, RE::COMPILER_NAME a_name, RE::TESObjectREFR* a_targetRef)
 {
 	auto cmd = a_script->GetCommand();
-	if (++_MsgHistoryIter == _MsgHistory.end()) {
-		_MsgHistoryIter = _MsgHistory.begin();
+	*_MsgHead = cmd;
+	if (++_MsgHead == _MsgHistory.end()) {
+		_MsgHead = _MsgHistory.begin();
 	}
-	*_MsgHistoryIter = cmd;
+	if (_MsgHead == _MsgTail) {
+		if (++_MsgTail == _MsgHistory.end()) {
+			_MsgTail = _MsgHistory.begin();
+		}
+	}
 
 	Papyrus::Events::EventManager::GetSingleton()->_ConsoleCommand.QueueEvent(
 			[=](const Papyrus::Events::ConsoleCommand_Filter& a_filter) {
