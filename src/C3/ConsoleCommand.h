@@ -37,7 +37,7 @@ namespace C3::Parser
 	/// @brief Parse a command string into a ConsoleCommand object
 	/// @param cmd The command string to parse
 	/// @return The parsed ConsoleCommand object
-	std::optional<ConsoleCommand> ParseCommand(const std::string_view& cmd)
+	std::optional<ConsoleCommand> ParseCommand(const std::string_view& cmd, RE::TESObjectREFR* a_ref)
 	{
 		std::vector<std::string_view> parts{};
 		for (size_t i = 0, n = 0; i < cmd.size(); ++i) {
@@ -77,7 +77,7 @@ namespace C3::Parser
       }
 			cmd.name = arg1.back();
 		} else {
-			cmd.target = RE::PlayerCharacter::GetSingleton();
+			cmd.target = a_ref;
 			cmd.name = parts.front();
 		}
 		if (cmd.name.empty()) {
