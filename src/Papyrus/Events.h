@@ -17,9 +17,9 @@ namespace Papyrus::Events
 		bool Save(SKSE::SerializationInterface* a_intfc) const;
 		bool operator<(const ConsoleCommand_Filter& a_rhs) const;
 
-		const RE::TESObjectREFR* filterRef;
-		RE::BSFixedString filterCmd;
-		bool partialMatch;
+		const RE::TESObjectREFR* filterRef{ nullptr };
+		RE::BSFixedString filterCmd{ "" };
+		bool partialMatch{ false };
 	};
   
   class EventManager :

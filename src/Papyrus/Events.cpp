@@ -17,22 +17,26 @@ namespace Papyrus::Events
 		filterCmd = cmd;
 		if (!a_intfc->ReadRecordData(partialMatch))
 			return false;
-		RE::FormID out;
-		if (!a_intfc->ReadRecordData(out))
+		RE::FormID formid;
+		if (!a_intfc->ReadRecordData(formid))
 			return false;
-		if (!a_intfc->ResolveFormID(out, out))
-			return false;
-		filterRef = RE::TESForm::LookupByID(out)->As<RE::TESObjectREFR>();
-		if (!filterRef) {
-			logger::warn("Failed to resolve form id ({})", out);
-			return false;
+		if (formid > 0) {
+			if (!a_intfc->ResolveFormID(formid, formid))
+				return false;
+			filterRef = RE::TESForm::LookupByID(formid)->As<RE::TESObjectREFR>();
+			if (!filterRef) {
+				logger::warn("Failed to resolve form id ({})", formid);
+				return false;
+			}
+		} else {
+			filterRef = nullptr;
 		}
 		return true;
 	}
 
 	bool ConsoleCommand_Filter::Save(SKSE::SerializationInterface* a_intfc) const
 	{
-		return stl::write_string(a_intfc, filterCmd) && a_intfc->WriteRecordData(partialMatch) && a_intfc->WriteRecordData(filterRef->formID);
+		return stl::write_string(a_intfc, filterCmd) && a_intfc->WriteRecordData(partialMatch) && a_intfc->WriteRecordData(filterRef ? filterRef->formID : 0);
 	}
 
 	bool ConsoleCommand_Filter::operator<(const ConsoleCommand_Filter& a_rhs) const

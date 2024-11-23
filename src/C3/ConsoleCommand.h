@@ -3,7 +3,7 @@
 #include "Util/FormLookup.h"
 #include "Util/StringUtil.h"
 
-namespace C3::Parser
+namespace C3
 {
 	struct Argument
 	{
