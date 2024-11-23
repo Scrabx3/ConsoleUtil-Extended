@@ -57,7 +57,7 @@ namespace StringUtil
 
 	static inline bool IsNumericString(const std::string& a_str)
 	{
-		static const std::regex pattern{ R"(^[+-]?(?:\d+|\d*\.\d+)$)" };
+		static const std::regex pattern{ R"(^[+-]?(?:(0x)?[0-9A-Fa-f]+|\d+|\d*\.\d+)$)" };
 		return std::regex_match(a_str, pattern);
 	}
 
