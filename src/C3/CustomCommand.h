@@ -51,6 +51,6 @@ namespace C3
 		RE::BSFixedString alias;
 		std::string help;
 		std::string script;
-		std::map<RE::BSFixedString, CustomFunction, FixedStringCmp> functions;
+		std::vector<CustomFunction> functions;
 	};
 }	 // namespace C3

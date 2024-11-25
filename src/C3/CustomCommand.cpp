@@ -67,8 +67,9 @@ namespace C3
 		functions({})
 	{
 		for (const auto& funcNode : a_node["subs"]) {
-			const auto func = CustomFunction{ funcNode };
-			for (auto&& [_, f] : functions) {
+			auto& func = functions.emplace_back(funcNode);
+			for (size_t i = 0; i < functions.size() - 1; i++) {
+				const auto& f = functions[i];
 				if (f.name == func.name) {
 					const auto err = std::format("Function name collision: {}", func.name);
 					throw std::runtime_error{ err.c_str() };
@@ -77,7 +78,6 @@ namespace C3
 					throw std::runtime_error{ err.c_str() };
 				}
 			}
-			functions.emplace(func.name, func);
 		}
 		if (functions.empty()) {
 			const auto err = std::format("Command {} has no functions", name);
@@ -91,7 +91,7 @@ namespace C3
 				name,
 				!alias.empty() ? std::format(" ({})", alias) : "",
 				!help.empty() ? ": " + help : "");
-		for (const auto& [_, func] : functions) {
+		for (const auto& func : functions) {
 			ret += "\n\t";
 			ret += func.ParseHelpString();
 		}
@@ -100,8 +100,8 @@ namespace C3
 
 	const CustomFunction* CustomCommand::GetFunction(const RE::BSFixedString& a_name) const
 	{
-		const auto it = functions.find(a_name);
-		return it != functions.end() ? &it->second : nullptr;
+		const auto it = std::find_if(functions.begin(), functions.end(), [&](const auto& a) { return a.name == a_name || a.alias == a_name; });
+		return it != functions.end() ? it._Ptr : nullptr;
 	}
 
 }	 // namespace C3
