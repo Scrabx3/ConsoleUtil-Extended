@@ -2,6 +2,7 @@
 
 #include "C3/Commands.h"
 #include "Papyrus/Events.h"
+#include "C3/ConsoleCommand.h"
 
 namespace C3
 {
@@ -36,14 +37,19 @@ namespace C3
 			}
 		}
 
-		Papyrus::Events::EventManager::GetSingleton()->_ConsoleCommand.QueueEvent(
-				[=](const Papyrus::Events::ConsoleCommand_Filter& a_filter) {
-					return a_filter.Apply(cmd, a_targetRef);
-				},
-				cmd, a_targetRef);
+		const auto targetRefId = a_targetRef ? a_targetRef->GetFormID() : 0;
+		try {
+			const auto cc = ParseConsoleCommand(cmd, targetRefId);
+			Papyrus::Events::EventManager::GetSingleton()->_ConsoleCommand.QueueEvent(
+					[=](const Papyrus::Events::ConsoleCommand_Filter& a_filter) { return a_filter.Apply(cc); },
+					cmd, a_targetRef);
 
-		if (Commands::Parse(cmd, a_targetRef))
-			return;
+			if (Commands::GetSingleton()->Run(cc)) {
+				return;
+			}
+		} catch (const std::exception& e) {
+			logger::error("Unrecognized command: {}, 0x{:X}. Error: {}", cmd, targetRefId, e.what());
+		}
 		_CompileAndRun(a_script, a_compiler, a_name, a_targetRef);
 	}
 

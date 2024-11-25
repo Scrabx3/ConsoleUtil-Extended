@@ -1,257 +1,315 @@
 #include "Commands.h"
-#include "Util.h"
+
+#include "Util/FormLookup.h"
 #include "Util/StringUtil.h"
+#include "Util/Misc.h"
+
+namespace C3
+{
+	void Commands::Initialize()
+	{
+		namespace fs = std::filesystem;
+		logger::info("Loading commands");
 
 		std::error_code ec{};
 		if (!fs::exists(DIRECTORY_PATH, ec) || fs::is_empty(DIRECTORY_PATH, ec)) {
 			logger::error("Error loading commands in {}: {}", DIRECTORY_PATH, ec.message());
 			return;
 		}
-
-		auto path = entry.path();
-		
-		if (path.extension() == ".yaml" || path.extension() == ".yml") {
+		for (const auto& entry : fs::directory_iterator(DIRECTORY_PATH)) {
+			if (entry.is_directory())
+				continue;
+			auto path = entry.path();
+			if (path.extension() != ".yaml" && path.extension() != ".yml")
+				continue;
 			try {
 				YAML::Node node = YAML::LoadFile(path.string());
-				auto command = node.as<Command>();
-				logger::info("registering command {} {} w/ {} subcommands", command.name, command.alias, command.subs.size());
+				auto& command = _commands.emplace_back(node);
 
-				if (_commands.count(command.name)) {
-					logger::error("{} already registered as a command - skipping", command.name);
+				logger::info("Registering command {} with {} functions", command.GetName(), command.GetFunctionCount());
+				if (std::ranges::find_if(_commands, [&](const auto& a) { return a.GetName() == command.GetName(); }) != _commands.end()) {
+					logger::error("Command {} is already registered as a command.", command.GetName());
+					continue;
+				} else if (std::ranges::find_if(_commands, [&](const auto& a) { return a.GetAlias() == command.GetAlias(); }) != _commands.end()) {
+					logger::error("Command Alias {} is already registered as an alias.", command.GetAlias());
 					continue;
 				}
-				else
-					_commands[command.name] = command;
-				
-				if (_commands.count(command.alias))
-					logger::error("{} command alias already registered as a command - skipping", command.alias);
-				else
-					_commands[command.alias] = command;
-
-
 			} catch (std::exception& e) {
-				logger::error("failed to create command from file: {} due to {}", path.string(), e.what());
+				logger::error("Failed to create command from file: {} due to {}", path.string(), e.what());
 			} catch (...) {
-				logger::error("failed to create command from file: {}", path.string());
+				logger::error("Failed to create command from file: {}", path.string());
 			}
 		}
+		logger::info("Loaded {} commands", _commands.size());
 	}
 
-}
+	bool Commands::Run(const ConsoleCommand& a_cmd) const
+	{
+		auto cmd = std::ranges::find_if(_commands, [&](const auto& a) {
+			return a.GetName() == a_cmd.name || a.GetAlias() == a_cmd.name;
+		});
+		if (cmd == _commands.end()) {
+			return false;
+		}
+		logger::info("Running command {}", cmd->GetName());
 
-bool Commands::Parse(const std::string& a_command, RE::TESObjectREFR* a_ref)
-{
-	std::istringstream iss(a_command);
-	std::vector<std::string> tokens;
-	std::string split;
-
-	while (iss >> std::quoted(split)) {
-		tokens.push_back(split);
-	}
-
-	if (auto cmd = GetCmd(tokens[0])) {
-
-		logger::info("command {} recognized", cmd->name);
-		
-		if (tokens.size() == 1) {
-			Print(cmd->Help());
+		if (a_cmd.arguments.empty() || std::any_of(a_cmd.arguments.begin(), a_cmd.arguments.end(), [&](const auto& arg) { return arg.name == "-h" || arg.name == "--help"; })) {
+			const auto msg = cmd->ParseHelpString();
+			Print(msg);
 			return true;
-		} 
-
-		if (tokens[1] == "-h" || tokens[1] == "--help") {
-			Print(cmd->Help());
+		}
+		const auto& funcName = a_cmd.arguments[0].name;
+		const auto& func = cmd->GetFunction(funcName);
+		if (!func) {
+			PrintErr(std::format("Invalid function {}", funcName));
+			return true;
+		}
+		std::vector<ConsoleArgument> arguments{ a_cmd.arguments.begin() + 1, a_cmd.arguments.end() };
+		if (!AlignArguments(func->args, arguments)) {
+			PrintErr("Invalid arguments");
 			return true;
 		}
 
-		if (auto sub = cmd->GetSub(tokens[1])) {
-			logger::info("subcommand {} recognized", sub->name);
+		logger::info("Invoking {} in {} with {} arguments", func->name, cmd->GetScript(), arguments.size());
+		const auto targetRef = RE::TESForm::LookupByID<RE::TESObjectREFR>(a_cmd.target);
+		auto args = new FunctionArguments(func->args, arguments, targetRef);
+		auto ptr = VmCallback::New([this](const RE::BSScript::Variable& a_var) {
+			const auto ret = VarToString(a_var, 2);
+			logger::info("received callback value = {}", ret);
+			Print(ret);
+		});
 
-			std::unordered_map<std::string, std::string> flags;
-			std::vector<std::string> positional;
-			std::string unrecognized;
-			std::string invalid;
+		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+		const auto result = vm->DispatchStaticCall(cmd->GetScript(), func->func, args, ptr);
+		// this is genuinely the worst fucking thing i have ever done
+		args->ClearOverrides();
 
-			if (auto selected = sub->GetSelected()) {
-				if (a_ref) {
-					if (selected->positional)
-						positional.emplace_back("selected");
-					else
-						flags[selected->name] = "selected";
-				}
-			}
-
-			bool help = false;
-
-			// TODO: add support for --flag=value pattern
-			// TODO: add support for arrays
-			for (int i = 2; i < tokens.size(); i++) {
-				const auto token = tokens[i];
-
-				if (token == "-h" || token == "--help") {
-					help = true;
-					break;
-				}
-
-				if (token.starts_with("-") && !StringUtil::IsNumericString(token)) {
-					if (auto arg = sub->GetFlag(token)) {
-						if (arg->flag) {
-							flags[arg->name] = "true";
-						} else if ((i + 1) < tokens.size() && !tokens[i + 1].starts_with("--") && (!tokens[i + 1].starts_with("-")) || StringUtil::IsNumericString(tokens[i + 1])) {
-							flags[arg->name] = tokens[i + 1];
-							logger::info("adding {} to flags", tokens[i + 1]);
-							i++;
-						} else {
-							invalid += arg->name;
-							invalid += " ";
-						}
-					} else {
-						unrecognized += token;
-						unrecognized += " ";
-					}
-				} else {
-					logger::info("adding {} to positional", token);
-					positional.push_back(token);
-				}
-			}
-
-			if (help) {
-				Print(cmd->Help());
-				return true;
-			}
-
-			if (!unrecognized.empty()) {
-				PrintErr(std::format("unrecognized flag arguments: {}", unrecognized));
-			}
-
-			if (!invalid.empty()) {
-				PrintErr(std::format("invalid flag arguments - was expecting value for: {}", invalid));
-			}
-
-			if (!unrecognized.empty() || !invalid.empty()) {
-				return true;
-			}
-
-			std::vector<std::string> values;
-			values.resize(sub->args.size());
-
-			std::string missing;
-
-			int pos = 0;
-			for (const auto& arg : sub->args) {
-				int index = sub->all[arg.name];
-
-				if (arg.positional && pos < positional.size()) {
-					values[index] = positional[pos];
-					logger::info("setting {} to {}", index, positional[pos]);
-					pos++;
-				} else if (!arg.positional && flags.count(arg.name)) {
-					logger::info("setting {} to {}", index, flags[arg.name]);
-					values[index] = flags[arg.name];
-				} else if (!arg.required) {
-					logger::info("setting {} to {}", index, Util::GetDefault(arg));
-					values[index] = Util::GetDefault(arg);
-					values[index] = Util::GetDefault(arg);
-				} else {
-					logger::info("{} is missing", index);
-					missing += arg.name;
-					missing += " ";
-				}
-			}
-
-			if (!missing.empty()) {
-				PrintErr(std::format("missing arguments {}", missing));
-				return true;
-			}		
-			
-			auto onResult = [](const RE::BSScript::Variable& a_var) {
-				using RawType = RE::BSScript::TypeInfo::RawType;
-				std::string ret;
-				
-				switch (a_var.GetType().GetRawType())
-				{
-				case RawType::kNone:
-					ret = "none";
-					break;
-				case RawType::kObject:
-					// TODO: implement
-					// maybe try to get the object, and then invoke GetFormID() on it?
-					ret = "completed";
-					break;
-				case RawType::kString:
-					ret = std::string{ a_var.GetString() };
-					break;
-				case RawType::kInt:
-					ret = std::to_string(a_var.GetSInt());
-					break;
-				case RawType::kFloat:
-					ret = std::to_string(a_var.GetFloat());
-					break;
-				case RawType::kBool:
-					ret = a_var.GetBool() ? "true" : "false";
-					break;
-				default:
-					// TODO: handle arrays
-					ret = "completed";
-					break;
-				}
-				logger::info("received callback value = {}", ret);
-				Print(ret);
-			};
-
-			if (sub->close) {
-				if (const auto queue = RE::UIMessageQueue::GetSingleton()) {
-					queue->AddMessage(RE::Console::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
-				}
-			}
-
-			Util::InvokeFuncWithArgs(cmd->script, sub->func, sub->args, values, a_ref, onResult);
-
-		} else {
-			PrintErr(std::format("invalid subcommand {}", tokens[1]));
-			return true;
+		if (!result) {
+			PrintErr("Failed to invoke function");
+		} else if (func->close) {
+			const auto queue = RE::UIMessageQueue::GetSingleton();
+			queue->AddMessage(RE::Console::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
 		}
-
 		return true;
 	}
 
-	return false;
-}
+	bool Commands::AlignArguments(const std::vector<CustomArgument>& a_customArgs, std::vector<ConsoleArgument>& a_consoleArgs) const
+	{
+		if (a_consoleArgs.size() > a_customArgs.size()) {
+			return false;
+		}
+		std::vector<int> sorted(a_customArgs.size(), -1);
+		// Fill in named arguments
+		for (size_t i = 0; i < a_consoleArgs.size(); i++) {
+			const auto& it = a_consoleArgs[i];
+			if (it.name.empty()) {
+				continue;
+			}
+			auto where = std::ranges::find_if(a_customArgs, [&](const auto& arg) { return arg.name == it.name || arg.alias == it.name; });
+			if (where == a_customArgs.end()) {
+				return false;
+			}
+			sorted[std::distance(a_customArgs.begin(), where)] = static_cast<int>(i);
+		}
+		// Fill in unnamed arguments
+		std::vector<ConsoleArgument> sortedArgs{};
+		for (size_t i = 0, n = 0; i < sorted.size(); i++) {
+			if (sorted[i] > -1) {
+				sortedArgs.push_back(a_consoleArgs[sorted[i]]);
+				continue;
+			}
+			auto where = std::find_if(a_consoleArgs.begin() + n, a_consoleArgs.end(), [](const auto& arg) { return arg.name.empty(); });
+			if (where == a_consoleArgs.end() && !a_customArgs[i].required) {
+				auto& obj = sortedArgs.emplace_back();
+				obj.type = a_customArgs[i].type;
+				obj.value = a_customArgs[i].defaultVal;
+				continue;
+			}
+			sortedArgs.push_back(*where);
+			n = std::distance(a_consoleArgs.begin(), where) + 1;
+		}
+		a_consoleArgs = std::move(sortedArgs);
+		return true;
+	}
 
-void Commands::Print(const std::string& a_str)
-{
-	std::string str{ stl::safe_string(a_str.c_str()) };
-	logger::info("trying to print {} {}", str, str.size());
-	auto task = SKSE::GetTaskInterface();
-	const int maxChars = 512;
-
-	str += "\n";
-
-	task->AddTask([=]() {
-		auto console = RE::ConsoleLog::GetSingleton();
-
-		if (console) {
-			std::size_t size = str.size();
-			std::size_t start = 0;
-			std::size_t lastSplit = 0;
-			
-			for (std::size_t i = 0; i < size; i++) {
-				if (str[i] == '\n' || (i == size - 1)) {
-					lastSplit = i;
-				}
-
-				if ((i - start) >= maxChars || (i == size - 1)) {
-					auto length = (lastSplit - start);
-
-					console->Print(str.substr(start, length).c_str());
-					start = lastSplit + 1;
+	std::string Commands::VarToString(const RE::BSScript::Variable& a_var, uint32_t a_recurse) const
+	{
+		if (a_recurse == 0) {
+			return "";
+		}
+		using RawType = RE::BSScript::TypeInfo::RawType;
+		switch (a_var.GetType().GetRawType()) {
+		case RawType::kNone:
+			return "none";
+		case RawType::kObject:
+			{
+				// COMEBACK: If I ever find a way to obtain FormType from object
+				// auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+				// auto policy = vm->GetObjectHandlePolicy();
+				// auto form = policy->GetObjectForHandle()
+#undef GetObject
+				auto obj = a_var.GetObject();
+				if (auto typeInfo = obj ? obj->GetTypeInfo() : nullptr) {
+					return typeInfo->GetName();
+				} else {
+					return "none";
 				}
 			}
+		case RawType::kString:
+			return std::string{ a_var.GetString() };
+		case RawType::kInt:
+			return std::to_string(a_var.GetSInt());
+		case RawType::kFloat:
+			return std::to_string(a_var.GetFloat());
+		case RawType::kBool:
+			return a_var.GetBool() ? "true" : "false";
+		case RawType::kObjectArray:
+		case RawType::kStringArray:
+		case RawType::kIntArray:
+		case RawType::kFloatArray:
+		case RawType::kBoolArray:
+			{
+				auto arr = a_var.GetArray();
+				if (!arr) {
+					return "none";
+				}
+				std::vector<std::string> values;
+				values.reserve(arr->size());
+				for (const auto& elem : *arr) {
+					values.push_back(VarToString(elem, a_recurse - 1));
+				}
+				auto joined = StringUtil::StringJoin(values, ", ");
+				return std::format("[{}]", joined);
+			}
+		default:
+			return "none";
 		}
-	});
-}
+	}
 
-void Commands::PrintErr(std::string a_str)
-{
-	logger::error("{}", a_str);
-	Print(std::format("ERROR {}", a_str));
-}
+	void Commands::Print(const std::string& a_str) const
+	{
+		logger::info("{}", a_str);
+		SKSE::GetTaskInterface()->AddTask([a_str = std::move(a_str)]() { Utility::PrintConsole(a_str); });
+	}
+
+	void Commands::PrintErr(std::string a_str) const
+	{
+		logger::error("{}", a_str);
+		const auto msg = std::format("Error: {}", a_str);
+		SKSE::GetTaskInterface()->AddTask([msg = std::move(msg)]() { Utility::PrintConsole(msg); });
+	}
+
+	FunctionArguments::FunctionArguments(const std::vector<CustomArgument>& a_customArgs, const std::vector<ConsoleArgument>& a_consoleArgs, RE::TESObjectREFR* a_target)
+	{
+		assert(a_customArgs.size() == a_consoleArgs.size());
+		const auto N = static_cast<decltype(_variables)::size_type>(a_consoleArgs.size());
+
+		_typeOverrides.reserve(N);
+		_variables.reserve(N);
+
+		for (RE::BSTArrayBase::size_type i = 0; i < N; i++) {
+			const auto& arg = a_customArgs[i];
+			const auto& val = a_consoleArgs[i];
+			RE::BSScript::Variable scriptVariable = ArgToVar(arg, val, a_target);
+			_variables.push_back(scriptVariable);
+		}
+	}
+
+	RE::BSScript::Variable FunctionArguments::ArgToVar(const CustomArgument& a_cstmArg, const ConsoleArgument& a_consoleArg, RE::TESObjectREFR* a_target)
+	{
+		RE::BSScript::Variable ret{};
+		switch (a_cstmArg.type) {
+		case Type::Int:
+      if (a_consoleArg.type == Type::Int) {
+				ret.SetSInt(std::stoi(a_consoleArg.value));
+			} else {
+				logger::error("Failed to parse int argument: {}", a_consoleArg.value);
+				ret.SetSInt(0);
+      }
+      break;
+    case Type::Bool:
+      ret.SetBool(a_consoleArg.value == "1" || a_consoleArg.value == "true" || a_consoleArg.value == "TRUE");
+      break;
+    case Type::Float:
+			if (a_consoleArg.type == Type::Int || a_consoleArg.type == Type::Float) {
+				ret.SetFloat(std::stof(a_consoleArg.value));
+			} else {
+        logger::error("Failed to parse float argument: {}", a_consoleArg.value);
+        ret.SetFloat(0.0f);
+      }
+			break;
+    case Type::String:
+			ret.SetString(a_consoleArg.value);
+			break;
+    case Type::Object:
+      {
+				const auto rawLower = StringUtil::CastLower(a_cstmArg.rawType);
+        RE::TESForm* form;
+				if (a_consoleArg.value == "none") {
+					ret.SetNone();
+          break;
+				} else if (a_consoleArg.value == "player" && rawLower == "actor") {
+					form = RE::PlayerCharacter::GetSingleton();
+				} else if (auto tmp = Utility::FormFromString<RE::TESForm>(a_consoleArg.value)) {
+					form = tmp;
+				} else if (a_cstmArg.selected && a_target) {
+					logger::info("Unable to get object from argument {}, using selected object: 0x{:X}", a_consoleArg.value, a_target->GetFormID());
+					form = a_target;
+				} else {
+					logger::error("Failed to parse object argument: {}", a_consoleArg.value);
+          ret.SetNone();
+          break;
+				}
+				assert(form);
+        auto object = Script::GetScriptObject(form, a_cstmArg.rawType.c_str());
+				if (!object)
+          object = Script::GetScriptObject(form, "form");
+        if (!object) {
+					logger::error("Failed to get script object for form: {} / 0x{:X}", a_consoleArg.value, form->formID);
+					ret.SetNone();
+					break;
+				}
+				assert(object);
+        // why god why?
+        auto type = object->GetTypeInfo();
+        while (type && StringUtil::CastLower(type->GetName()) != rawLower) {
+          type = type->GetParent();
+        }
+				if (type && type != object->type.get() && StringUtil::CastLower(type->GetName()) == rawLower) {
+					logger::info("Replacing object type from {} to {}", object->type->GetName(), type->GetName());
+					auto pair = std::make_pair(object, Script::TypePtr{ object->type });
+					_typeOverrides.push_back(pair);
+					object->type = RE::BSTSmartPointer{ type };
+				}
+				ret.SetObject(std::move(object));
+        break;
+      }
+    default:
+      logger::error("Unknown argument type: {}", magic_enum::enum_name(a_cstmArg.type));
+      ret.SetNone();
+      break;
+		}
+		return ret;
+	}
+
+	void FunctionArguments::PushVariable(RE::BSScript::Variable variable)
+	{
+		_variables.emplace_back(std::move(variable));
+	}
+
+	bool FunctionArguments::operator()(RE::BSScrapArray<RE::BSScript::Variable>& destination) const
+	{
+		destination = _variables;
+		return true;
+	}
+
+	void FunctionArguments::ClearOverrides()
+	{
+		for (auto&& [obj, type] : _typeOverrides) {
+			obj->type = type;
+			obj.reset();
+			type.reset();
+		}
+		_typeOverrides.clear();
+	}
+}	 // namespace C3
