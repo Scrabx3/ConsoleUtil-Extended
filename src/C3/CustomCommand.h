@@ -13,7 +13,7 @@ namespace C3
 			Object,
 		};
 
-		inline std::string Help()
+		inline std::string Help() const
 		{
 			std::string msg{ "   " + name + " (" + rawType + ")" };
 			if (selected) {
@@ -43,7 +43,7 @@ namespace C3
 
 	struct SubCommand
 	{
-		std::string Help()
+		std::string Help() const
 		{
 			std::string spacing(3, ' ');
 			std::string msg{ spacing + name };
@@ -82,7 +82,7 @@ namespace C3
 
 	struct Command
 	{
-		inline std::string Help() 
+		inline std::string Help() const
 		{
 			std::string msg{ name + " (" + alias + ") : " + help + "\n" };
 			for (auto& sub : subs) {
