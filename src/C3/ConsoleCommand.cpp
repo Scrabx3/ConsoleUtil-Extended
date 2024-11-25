@@ -7,34 +7,38 @@ namespace C3
 {
 	ConsoleCommand ParseConsoleCommand(const std::string_view& a_cmd, RE::FormID a_ref)
 	{
-		std::vector<std::string_view> parts{};
+		std::vector<std::string> parts;
 		size_t i = 0, n = 0;
-		for (; i < a_cmd.size(); ++i) {
-			const auto c = a_cmd[i];
-			switch (c) {
-			case ' ':
-				parts.push_back(a_cmd.substr(n, i));
-				n = i + 1;
-				break;
-			case '"':
-				for (n = i + 1; i < a_cmd.size(); ++i) {
-					if (a_cmd[i] == '"') {
-						parts.push_back(a_cmd.substr(n, i - n));
-						break;
-					}
+		bool inQuotes = false;
+		while (i < a_cmd.size()) {
+			if (a_cmd[i] == ' ' && !inQuotes) {
+				if (n != i) {
+          logger::info("Adding part: {}", a_cmd.substr(n, i - n));
+					parts.emplace_back(a_cmd.substr(n, i - n));
 				}
-				break;
+				n = i + 1;
+			} else if (a_cmd[i] == '"') {
+				inQuotes = !inQuotes;
+				if (!inQuotes) {
+          logger::info("Adding part: {}", a_cmd.substr(n, i - n));
+					parts.emplace_back(a_cmd.substr(n, i - n));
+					n = i + 1;
+				} else {
+					n = i + 1;
+				}
 			}
+			i++;
 		}
-    if (n < i) {
-      parts.push_back(a_cmd.substr(n, i));
-    }
+		if (n < i) {
+      logger::info("Adding part: {}", a_cmd.substr(n, i - n));
+			parts.emplace_back(a_cmd.substr(n, i - n));
+		}
 		ConsoleCommand cmd{};
 		if (parts.empty()) {
 			return cmd;
 		}
 		// Parse the command name and target
-		const auto arg1 = StringUtil::StringSplit(parts.front(), ".");
+		const auto arg1 = StringUtil::StringSplitToOwned(parts.front(), ".");
 		if (arg1.size() == 2) {
 			if (arg1.front() == "player") {
 				cmd.target = 0x14;
@@ -70,10 +74,8 @@ namespace C3
 					throw std::invalid_argument{ "Invalid argument: Flag argument specified but is missing value" };
 				}
 				part = *it;
-				arg.name = name;
 			}
-			std::string partStr{ part };
-			if (StringUtil::IsNumericString(partStr)) {
+			if (StringUtil::IsNumericString(part)) {
 				if (part.find('.') != std::string::npos) {
 					arg.type = Type::Float;
 				} else {
@@ -82,9 +84,10 @@ namespace C3
 			} else {
 				arg.type = Type::String;
 			}
-			arg.value = StringUtil::CastLower(partStr.data());
+			arg.value = StringUtil::CastLower(part);
 			cmd.arguments.push_back(arg);
 		}
+    logger::info("Parsed command: {} with {} args and target: {:X}", cmd.name, cmd.arguments.size(), cmd.target);
 		return cmd;
 	}
 
