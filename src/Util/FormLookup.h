@@ -22,19 +22,23 @@ namespace Utility
 		}
 	}
 
-	template <typename T, typename = std::enable_if_t<!std::is_pointer<T>::value>>
+	static inline RE::FormID FormFromString(const std::string_view& a_string)
+	{
+		const auto base = a_string.starts_with("0x") ? 16 : 10;
+		return FormFromString(a_string, base);
+	}
+
+	template <typename T, typename = std::enable_if_t<!std::is_pointer_v<T>>>
 	static inline T* FormFromString(const std::string_view& a_string, int base)
 	{
 		const auto id = FormFromString(a_string, base);
 		return id == 0 ? nullptr : RE::TESForm::LookupByID<T>(id);
 	}
 
-	template <typename T, typename = std::enable_if_t<!std::is_pointer<T>::value>>
+	template <typename T, typename = std::enable_if_t<!std::is_pointer_v<T>>>
 	static inline T* FormFromString(const std::string_view& a_string)
 	{
-		const auto base = a_string.starts_with("0x")																 ? 16 :
-											a_string.find_first_of("ABCDEF") != std::string_view::npos ? 16 :
-																																									 10;
+		const auto base = a_string.starts_with("0x") ? 16 : 10;
 		return FormFromString<T>(a_string, base);
 	}
 
