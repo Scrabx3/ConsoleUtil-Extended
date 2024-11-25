@@ -58,7 +58,7 @@ namespace C3
 			Print(msg);
 			return true;
 		}
-		const auto& funcName = a_cmd.arguments[0].name;
+		const auto& funcName = a_cmd.arguments[0].value;
 		const auto& func = cmd->GetFunction(funcName);
 		if (!func) {
 			PrintErr(std::format("Invalid function {}", funcName));
