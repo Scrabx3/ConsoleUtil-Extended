@@ -1,5 +1,6 @@
 #pragma once
 
+#include "C3/ConsoleCommand.h"
 #include "RegistrationMapConditional.h"
 #include "Util/Singleton.h"
 #include "Util/StringUtil.h"
@@ -10,10 +11,14 @@ namespace Papyrus::Events
 	{
 		ConsoleCommand_Filter() = default;
 		ConsoleCommand_Filter(const RE::TESObjectREFR* a_ref, const std::string& a_filter, bool a_partialMatch) :
-			filterRef(a_ref ? a_ref->GetFormID() : 0), filterCmd(StringUtil::CastLower(a_filter)), partialMatch(a_partialMatch) {}
+			filterRef(a_ref ? a_ref->GetFormID() : 0),
+			filterCmd(StringUtil::CastLower(a_filter)),
+			partialMatch(a_partialMatch),
+			consoleCmd(C3::ParseConsoleCommand(filterCmd, filterRef))
+		{}
 		~ConsoleCommand_Filter() = default;
 
-		bool Apply(const RE::BSFixedString& a_cmd, const RE::TESObjectREFR* a_target) const;
+		bool Apply(const C3::ConsoleCommand& a_cmd) const { return consoleCmd.ContainedBy(a_cmd, partialMatch); }
 		bool Load(SKSE::SerializationInterface* a_intfc);
 		bool Save(SKSE::SerializationInterface* a_intfc) const;
 		bool operator<(const ConsoleCommand_Filter& a_rhs) const;
@@ -21,6 +26,7 @@ namespace Papyrus::Events
 		RE::FormID filterRef{ 0 };
 		std::string filterCmd{ "" };
 		bool partialMatch{ false };
+		C3::ConsoleCommand consoleCmd{};
 	};
   
   class EventManager :
@@ -41,7 +47,7 @@ namespace Papyrus::Events
     void FormDelete(RE::VMHandle a_handle);
   };;
 
-	struct ConsoleCommand
+	struct ConsoleCommandCallbackEvent
 	{
 #define REGISTER(SUFFIX, TYPE)                                                                                                            \
 	static bool RegisterForConsoleCommand##SUFFIX(STATICARGS, TYPE obj, std::string filter, bool partialMatch, RE::TESObjectREFR* a_target) \
@@ -50,7 +56,11 @@ namespace Papyrus::Events
 			a_vm->TraceStack("obj is none", a_stackID);                                                                                         \
 			return false;                                                                                                                       \
 		}                                                                                                                                     \
-		return EventManager::GetSingleton()->_ConsoleCommand.Register(obj, ConsoleCommand_Filter{ a_target, filter, partialMatch });          \
+		try {                                                                                                                                 \
+			return EventManager::GetSingleton()->_ConsoleCommand.Register(obj, ConsoleCommand_Filter{ a_target, filter, partialMatch });        \
+		} catch (const std::exception& e) {                                                                                                   \
+			logger::error("Failed to register Command {}. Error: {}", filter, e.what());                                                        \
+		}                                                                                                                                     \
 	}
 
 		REGISTER(, RE::TESForm*);
@@ -58,13 +68,16 @@ namespace Papyrus::Events
 		REGISTER(_MgEff, RE::ActiveEffect*);
 #undef REGISTER
 
-#define UNREGISTER(SUFFIX, TYPE)                                                                                              \
+#define UNREGISTER(SUFFIX, TYPE)                                                                                        \
 	static void UnregisterForConsoleCommand##SUFFIX(STATICARGS, TYPE obj, std::string a_cmd, RE::TESObjectREFR* a_target) \
-	{                                                                                                                           \
-		if (!obj) {                                                                                                               \
-			a_vm->TraceStack("obj is none", a_stackID);                                                                             \
-			return;                                                                                                                 \
-		} EventManager::GetSingleton()->_ConsoleCommand.Unregister(obj, { a_target, a_cmd, true });		EventManager::GetSingleton()->_ConsoleCommand.Unregister(obj, { a_target, a_cmd, false }); }
+	{                                                                                                                     \
+		if (!obj) {                                                                                                         \
+			a_vm->TraceStack("obj is none", a_stackID);                                                                       \
+			return;                                                                                                           \
+		}                                                                                                                   \
+		EventManager::GetSingleton()->_ConsoleCommand.Unregister(obj, { a_target, a_cmd, true });                           \
+		EventManager::GetSingleton()->_ConsoleCommand.Unregister(obj, { a_target, a_cmd, false });                          \
+	}
 
 		UNREGISTER(, RE::TESForm*);
 		UNREGISTER(_Alias, RE::BGSBaseAlias*);
@@ -86,7 +99,7 @@ namespace Papyrus::Events
 
   inline bool Register(VM* a_vm)
   {
-    ConsoleCommand::Register(a_vm);
+    ConsoleCommandCallbackEvent::Register(a_vm);
     return true;
   }
 }	 // namespace Papyrus::Events

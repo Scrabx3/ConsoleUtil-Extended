@@ -1,14 +1,8 @@
 #include "Events.h"
 
+
 namespace Papyrus::Events
 {
-	bool ConsoleCommand_Filter::Apply(const RE::BSFixedString& a_cmd, const RE::TESObjectREFR* a_target) const
-	{
-		const auto matchCmd = filterCmd.empty() || (partialMatch ? a_cmd.contains(filterCmd) : a_cmd == RE::BSFixedString{ filterCmd });
-		const auto matchRef = !filterRef || a_target && filterRef == a_target->GetFormID();
-		return matchCmd && matchRef;
-	}
-
 	bool ConsoleCommand_Filter::Load(SKSE::SerializationInterface* a_intfc)
 	{
 		// filterCmd
@@ -35,6 +29,13 @@ namespace Papyrus::Events
 			filterRef = formid;
 		} else {
 			filterRef = 0;
+		}
+		// cmd
+		try {
+			consoleCmd = C3::ParseConsoleCommand(filterCmd, filterRef);
+		} catch (const std::exception& e) {
+			logger::warn("Failed to parse console command: {}. Error: {}", filterCmd, e.what());
+			return false;
 		}
 		return true;
 	}
