@@ -60,6 +60,7 @@ namespace Papyrus::Events
 			return EventManager::GetSingleton()->_ConsoleCommand.Register(obj, ConsoleCommand_Filter{ a_target, filter, partialMatch });        \
 		} catch (const std::exception& e) {                                                                                                   \
 			logger::error("Failed to register Command {}. Error: {}", filter, e.what());                                                        \
+			return false;                                                                                                                       \
 		}                                                                                                                                     \
 	}
 
