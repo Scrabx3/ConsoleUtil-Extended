@@ -3,6 +3,37 @@
 #include "Serialization/Serialization.h"
 #include "Papyrus/Events.h"
 #include "Papyrus/Functions.h"
+#include "Util/Singleton.h"
+
+struct MenuOpenCloseEvent : 
+	public RE::BSTEventSink<RE::MenuOpenCloseEvent>,
+	public Singleton<MenuOpenCloseEvent>
+{
+	using EventResult = RE::BSEventNotifyControl;
+	EventResult ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override
+	{
+		const auto messages = RE::UIMessageQueue::GetSingleton();
+		if (a_event->menuName == RE::MainMenu::MENU_NAME) {
+			messages->AddMessage(RE::Console::MENU_NAME, RE::UI_MESSAGE_TYPE::kShow, nullptr);
+		} else if (a_event->menuName == RE::Console::MENU_NAME) {
+			messages->AddMessage(RE::Console::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
+			RE::UI::GetSingleton()->RemoveEventSink(this);
+		}
+		return EventResult::kContinue;
+	}
+};
+
+static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
+{
+	switch (message->type) {
+	case SKSE::MessagingInterface::kPostLoadGame:
+		{
+			const auto ui = RE::UI::GetSingleton();
+			ui->AddEventSink(MenuOpenCloseEvent::GetSingleton());
+		}
+		break;
+	}
+}
 
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
 {
@@ -47,6 +78,12 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 
 	C3::Hooks::Install();
 	C3::Commands::GetSingleton()->Initialize();
+
+	const auto msging = SKSE::GetMessagingInterface();
+	if (!msging->RegisterListener("SKSE", SKSEMessageHandler)) {
+		logger::critical("Failed to register Listener");
+		return false;
+	}
 
 	const auto papyrus = SKSE::GetPapyrusInterface();
 	if (!papyrus) {
