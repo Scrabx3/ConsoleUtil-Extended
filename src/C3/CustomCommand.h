@@ -1,179 +1,57 @@
 #pragma once
 
+#include "ArgumentType.h"
+
 namespace C3
 {
-	struct Arg
+	struct CustomArgument
 	{
-		enum Type
-		{
-			Int,
-			Bool,
-			Float,
-			String,
-			Object,
-		};
+		CustomArgument(const YAML::Node& a_node);
+		~CustomArgument() = default;
+		std::string ParseHelpString() const;
 
-		inline std::string Help() const
-		{
-			std::string msg{ "   " + name + " (" + rawType + ")" };
-			if (selected) {
-				msg += " (selectable)";
-			}
-			if (required) {
-				msg += " (required)";
-			}
-
-			if (!help.empty())
-				msg += ": " + help;
-			msg += "\n";
-			return msg;
-		}
-
-		std::string name;
+		RE::BSFixedString name;
+		RE::BSFixedString alias;
 		std::string help;
 		std::string defaultVal;
-		std::string alias;
-		Type type;
 		std::string rawType;
-		bool positional = false;
-		bool selected = false;
-		bool flag = false;
-		bool required = false;
+		Type type;
+		bool selected;
+		bool required;
 	};
 
-	struct SubCommand
+	struct CustomFunction
 	{
-		std::string Help() const
-		{
-			std::string spacing(3, ' ');
-			std::string msg{ spacing + name };
-			
-			if (!help.empty())
-				msg += ": " + help;
-			msg += "\n";
+		CustomFunction(const YAML::Node& a_node);
+		~CustomFunction() = default;
+		std::string ParseHelpString() const;
 
-			for (auto& arg : args) {
-				msg += spacing;
-				msg += "   ";
-				msg += arg.Help();
-			}
-			return msg;
-		}
-
-		inline Arg* GetFlag(std::string a_name) { return flags.count(a_name) ? &args[flags[a_name]] : nullptr; }
-		inline Arg* GetSelected() 
-		{
-			for (auto& arg : args) {
-				if (arg.selected)
-					return &arg;
-			}
-
-			return nullptr;
-		}
-		std::string name;
+		RE::BSFixedString name;
+		RE::BSFixedString alias;
 		std::string func;
 		std::string help;
-		std::string alias;
-		std::vector<Arg> args;
-		std::unordered_map<std::string, int> flags;
-		std::unordered_map<std::string, int> all;
+		std::vector<CustomArgument> args;
 		bool close;
 	};
 
-	struct Command
+	class CustomCommand
 	{
-		inline std::string Help() const
-		{
-			std::string msg{ name + " (" + alias + ") : " + help + "\n" };
-			for (auto& sub : subs) {
-				msg += sub.Help();
-			}
-			return msg;
-		}
+	public:
+		// CustomCommand() = default;
+		CustomCommand(const YAML::Node& a_node);
+		~CustomCommand() = default;
+		RE::BSFixedString GetName() const { return name; }
+		RE::BSFixedString GetAlias() const { return alias; }
+		std::string ParseHelpString() const;
+		std::string GetScript() const { return script; }
+		size_t GetFunctionCount() const { return functions.size(); }
+		const CustomFunction* GetFunction(const RE::BSFixedString& a_name) const;
 
-		SubCommand* GetSub(std::string a_name) { return map.count(a_name) ? &map[a_name] : nullptr; } 
-
-		std::string name;
-		std::string help;
-		std::string alias;
-		std::string script;
-		std::vector<SubCommand> subs;
-		std::unordered_map<std::string, SubCommand> map;
+	private:
+		RE::BSFixedString name{ "" };
+		RE::BSFixedString alias{ "" };
+		std::string help{ "" };
+		std::string script{ "" };
+		std::map<RE::BSFixedString, CustomFunction, FixedStringCmp> functions{};
 	};
-}
-
-namespace YAML
-{
-	template <>
-	struct convert<C3::Arg>
-	{
-		static bool decode(const Node& node, C3::Arg& rhs)
-		{
-			rhs.name = node["name"].as<std::string>("");
-			rhs.help = node["help"].as<std::string>("");
-			rhs.defaultVal = node["default"].as<std::string>("");
-			rhs.alias = node["alias"].as<std::string>("");
-			rhs.selected = node["selected"].as<std::string>("false") == "true";
-			rhs.flag = node["flag"].as<std::string>("false") == "true";
-			rhs.required = node["required"].as<std::string>("false") == "true";
-
-			rhs.positional = !rhs.name.starts_with("-");
-
-			rhs.rawType = node["type"].as<std::string>("");
-			rhs.type = magic_enum::enum_cast<C3::Arg::Type>(rhs.rawType, magic_enum::case_insensitive).value_or(C3::Arg::Type::Object);
-
-			return !rhs.name.empty();
-		}
-	};
-
-	template <>
-	struct convert<C3::SubCommand>
-	{
-		static bool decode(const Node& node, C3::SubCommand& rhs)
-		{
-			rhs.name = node["name"].as<std::string>("");
-			rhs.help = node["help"].as<std::string>("");
-			rhs.alias = node["alias"].as<std::string>("");
-			rhs.func = node["func"].as<std::string>("");
-			rhs.close = node["close"].as<std::string>("") == "true";
-			
-			// TODO: arg name/alias collision checks
-			rhs.args = node["args"].as<std::vector<C3::Arg>>(std::vector<C3::Arg>{});
-			for (int i = 0; i < rhs.args.size(); i++) {
-				auto& arg = rhs.args[i];
-
-				if (!arg.positional) {
-					rhs.flags[arg.name] = i;
-					if (!rhs.alias.empty())
-						rhs.flags[arg.alias] = i;
-				}
-
-				rhs.all[arg.name] = i;
-
-			}
-
-			return !rhs.name.empty() && !rhs.func.empty();
-		}
-	};
-
-	template <>
-	struct convert<C3::Command>
-	{
-		static bool decode(const Node& node, C3::Command& rhs)
-		{
-			rhs.name = node["name"].as<std::string>("");
-			rhs.help = node["help"].as<std::string>("");
-			rhs.alias = node["alias"].as<std::string>("");
-			rhs.script = node["script"].as<std::string>("");
-
-			// TODO: sub name/alias collision checks
-			rhs.subs = node["subs"].as<std::vector<C3::SubCommand>>(std::vector<C3::SubCommand>{});
-			for (auto& sub : rhs.subs) {
-				rhs.map[sub.name] = sub;
-				rhs.map[sub.alias] = sub;
-			}
-
-			return !rhs.name.empty() && !rhs.script.empty();
-		}
-	};
-}
+}	 // namespace C3

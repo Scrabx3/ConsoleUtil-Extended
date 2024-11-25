@@ -104,5 +104,20 @@ namespace Serialization
 	}
 }
 
+struct FixedStringCmp
+{
+	bool operator()(const RE::BSFixedString& a_lhs, const RE::BSFixedString& a_rhs) const { return _strcmpi(a_lhs.data(), a_rhs.data()) < 0; }
+};
+
+template <>
+struct std::formatter<RE::BSFixedString> : std::formatter<const char*>
+{
+	template <typename FormatContext>
+	auto format(const RE::BSFixedString& myStr, FormatContext& ctx) const
+	{
+		return std::formatter<const char*>::format(myStr.data(), ctx);
+	}
+};
+
 #define DLLEXPORT __declspec(dllexport)
 

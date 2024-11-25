@@ -1,0 +1,107 @@
+#include "CustomCommand.h"
+
+#include "Util/FormLookup.h"
+#include "Util/Script.h"
+#include "Util/StringUtil.h"
+
+namespace C3
+{
+	CustomArgument::CustomArgument(const YAML::Node& a_node) :
+		name(a_node["name"].as<std::string>()),
+		alias(a_node["alias"].as<std::string>("")),
+		help(a_node["help"].as<std::string>("")),
+		defaultVal(a_node["default"].as<std::string>("")),
+		rawType(a_node["type"].as<std::string>("")),
+		type(magic_enum::enum_cast<Type>(rawType, magic_enum::case_insensitive).value_or(Type::Object)),
+		selected(a_node["selected"].as<std::string>("false") == "true" || a_node["selected"].as<bool>(false)),
+		required(a_node["required"].as<std::string>("false") == "true" || a_node["required"].as<bool>(false))
+	{}
+
+	std::string CustomArgument::ParseHelpString() const
+	{
+		return std::format("{} ({}){}{}{}",
+				name,
+				rawType,
+				selected ? " (selectable)" : "",
+				required ? " (required)" : "",
+				!help.empty() ? ": " + help : "");
+	}
+
+	CustomFunction::CustomFunction(const YAML::Node& a_node) :
+		name(a_node["name"].as<std::string>()),
+		alias(a_node["alias"].as<std::string>("")),
+		func(a_node["func"].as<std::string>()),
+		help(a_node["help"].as<std::string>("")),
+		args({}),
+		close(a_node["close"].as<std::string>("false") == "true" || a_node["close"].as<bool>(false))
+	{
+		for (const auto& arg : a_node["args"]) {
+			auto& last = args.emplace_back(arg);
+			for (size_t i = 0; i < args.size() - 1; i++) {
+				if (args[i].name == last.name) {
+					const auto err = std::format("Argument name collision: {}", last.name);
+					throw std::runtime_error{ err.c_str() };
+				} else if (args[i].alias == last.alias) {
+					const auto err = std::format("Argument alias collision: {}", last.alias);
+					throw std::runtime_error{ err.c_str() };
+				}
+			}
+		}
+	}
+
+	std::string CustomFunction::ParseHelpString() const
+	{
+		auto ret = std::format("{}{}:", name, !help.empty() ? ": " + help : "");
+		for (const auto& arg : args) {
+			ret += "\n\t";
+			ret += arg.ParseHelpString();
+		}
+		return ret;
+	}
+
+	CustomCommand::CustomCommand(const YAML::Node& a_node) :
+		name(a_node["name"].as<std::string>()),
+		alias(a_node["alias"].as<std::string>("")),
+		help(a_node["help"].as<std::string>("")),
+		script(a_node["script"].as<std::string>()),
+		functions({})
+	{
+		for (const auto& funcNode : a_node["subs"]) {
+			const auto func = CustomFunction{ funcNode };
+			for (auto&& [_, f] : functions) {
+				if (f.name == func.name) {
+					const auto err = std::format("Function name collision: {}", func.name);
+					throw std::runtime_error{ err.c_str() };
+				} else if (f.alias == func.alias) {
+					const auto err = std::format("Function alias collision: {}", func.alias);
+					throw std::runtime_error{ err.c_str() };
+				}
+			}
+			functions.emplace(func.name, func);
+		}
+		if (functions.empty()) {
+			const auto err = std::format("Command {} has no functions", name);
+			throw std::runtime_error{ err.c_str() };
+		}
+	}
+
+	std::string CustomCommand::ParseHelpString() const
+	{
+		auto ret = std::format("{}{}{}",
+				name,
+				!alias.empty() ? std::format(" ({})", alias) : "",
+				!help.empty() ? ": " + help : "");
+		for (const auto& [_, func] : functions) {
+			ret += "\n\t";
+			ret += func.ParseHelpString();
+		}
+		return ret;
+	}
+
+	const CustomFunction* CustomCommand::GetFunction(const RE::BSFixedString& a_name) const
+	{
+		const auto it = functions.find(a_name);
+		return it != functions.end() ? &it->second : nullptr;
+	}
+
+}	 // namespace C3
