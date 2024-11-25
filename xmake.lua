@@ -1,7 +1,7 @@
 set_xmakever("2.9.5")
 
 -- Globals
-PROJECT_NAME = "CustomConsole"
+PROJECT_NAME = "ConsoleUtilSSE"
 
 -- Project
 set_project(PROJECT_NAME)
@@ -123,7 +123,7 @@ target(PROJECT_NAME)
             print("Warning: GamePath not defined. Skipping script compilation.")
         end
         if mod_folder and has_config("copy_to_papyrus") then
-            local SkyrimPath = path.join(mod_folder, "CustomConsole")
+            local SkyrimPath = path.join(mod_folder, "ConsoleUtilSSE Extended")
             os.cp("dist/*", SkyrimPath)
         else
             print("Warning: SkyrimPath not defined. Skipping post-build copy.")

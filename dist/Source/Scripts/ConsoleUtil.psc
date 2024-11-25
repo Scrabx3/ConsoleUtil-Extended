@@ -1,13 +1,24 @@
-Scriptname CustomConsole Hidden
+Scriptname ConsoleUtil Hidden
 
 ; Print the given message into the console
 Function PrintConsole(String asText) native global
+Function PrintMessage(String a_message) native global
 
 ; Execute the given command in the console
-Function ExecuteCommand(String asCommand, ObjectReference akTargetReference) native global
+Function ExecuteCommand(String a_command) native global
+Function ExecuteCommandTarget(String asCommand, ObjectReference akTargetReference) native global
+
+; Get the currently selected reference in the console
+ObjectReference Function GetSelectedReference() native global
+
+; Set the currently selected reference in the console
+Function SetSelectedReference(ObjectReference a_reference) native global
 
 ; Get the last n console messages. The stack has a maximum size of 128 messages and only includes messages send by the player
 String[] Function GetConsoleMessages(int n) native global
+
+; Get the most recent message send to the console (from any source)
+String Function ReadMessage() native global
 
 ; Register to receive an event if the specified console command is used
 ; If partial match is true, you will receive any command that contains the specified command, otherwise only exact matches will be received
@@ -22,3 +33,6 @@ Function UnregisterForConsoleCommand_MgEff(ActiveMagicEffect akMagicEffect, Stri
 
 Event OnConsoleCommand(String asCommand, ObjectReference akTargetReference)
 EndEvent
+
+; The scripts API version (will return 777 or greater for ConsoleUtil Extended)
+int Function GetVersion() native global

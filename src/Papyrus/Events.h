@@ -87,12 +87,12 @@ namespace Papyrus::Events
 
 		static inline void Register(VM* a_vm)
 		{
-			REGISTERFUNC(RegisterForConsoleCommand, "CustomConsole", true);
-			REGISTERFUNC(RegisterForConsoleCommand_Alias, "CustomConsole", true);
-			REGISTERFUNC(RegisterForConsoleCommand_MgEff, "CustomConsole", true);
-			REGISTERFUNC(UnregisterForConsoleCommand, "CustomConsole", true);
-			REGISTERFUNC(UnregisterForConsoleCommand_Alias, "CustomConsole", true);
-			REGISTERFUNC(UnregisterForConsoleCommand_MgEff, "CustomConsole", true);
+			REGISTERFUNC(RegisterForConsoleCommand, "ConsoleUtil", true);
+			REGISTERFUNC(RegisterForConsoleCommand_Alias, "ConsoleUtil", true);
+			REGISTERFUNC(RegisterForConsoleCommand_MgEff, "ConsoleUtil", true);
+			REGISTERFUNC(UnregisterForConsoleCommand, "ConsoleUtil", true);
+			REGISTERFUNC(UnregisterForConsoleCommand_Alias, "ConsoleUtil", true);
+			REGISTERFUNC(UnregisterForConsoleCommand_MgEff, "ConsoleUtil", true);
 
 			logger::info("Initialized Console Events"sv);
 		}
