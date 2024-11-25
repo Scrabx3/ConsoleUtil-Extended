@@ -8,7 +8,8 @@ namespace C3
 	ConsoleCommand ParseConsoleCommand(const std::string_view& a_cmd, RE::FormID a_ref)
 	{
 		std::vector<std::string_view> parts{};
-		for (size_t i = 0, n = 0; i < a_cmd.size(); ++i) {
+		size_t i = 0, n = 0;
+		for (; i < a_cmd.size(); ++i) {
 			const auto c = a_cmd[i];
 			switch (c) {
 			case ' ':
@@ -25,10 +26,13 @@ namespace C3
 				break;
 			}
 		}
-		if (parts.empty()) {
-			throw std::invalid_argument{ "Empty command" };
-		}
+    if (n < i) {
+      parts.push_back(a_cmd.substr(n, i));
+    }
 		ConsoleCommand cmd{};
+		if (parts.empty()) {
+			return cmd;
+		}
 		// Parse the command name and target
 		const auto arg1 = StringUtil::StringSplit(parts.front(), ".");
 		if (arg1.size() == 2) {
