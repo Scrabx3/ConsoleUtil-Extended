@@ -2,19 +2,11 @@
 #include "Util.h"
 #include "Util/StringUtil.h"
 
-using namespace C3;
-namespace fs = std::filesystem;
-
-void Commands::Load()
-{
-	// TODO: parse config files
-	std::string dir{ "Data/SKSE/CustomConsole" };
-
-	logger::info("loading commands");
-
-	for (const auto& entry : fs::directory_iterator(dir)) {
-		if (entry.is_directory())
-			continue;
+		std::error_code ec{};
+		if (!fs::exists(DIRECTORY_PATH, ec) || fs::is_empty(DIRECTORY_PATH, ec)) {
+			logger::error("Error loading commands in {}: {}", DIRECTORY_PATH, ec.message());
+			return;
+		}
 
 		auto path = entry.path();
 		
