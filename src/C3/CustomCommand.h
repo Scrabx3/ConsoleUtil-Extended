@@ -37,7 +37,6 @@ namespace C3
 	class CustomCommand
 	{
 	public:
-		// CustomCommand() = default;
 		CustomCommand(const YAML::Node& a_node);
 		~CustomCommand() = default;
 		RE::BSFixedString GetName() const { return name; }
@@ -48,10 +47,10 @@ namespace C3
 		const CustomFunction* GetFunction(const RE::BSFixedString& a_name) const;
 
 	private:
-		RE::BSFixedString name{ "" };
-		RE::BSFixedString alias{ "" };
-		std::string help{ "" };
-		std::string script{ "" };
-		std::map<RE::BSFixedString, CustomFunction, FixedStringCmp> functions{};
+		RE::BSFixedString name;
+		RE::BSFixedString alias;
+		std::string help;
+		std::string script;
+		std::map<RE::BSFixedString, CustomFunction, FixedStringCmp> functions;
 	};
 }	 // namespace C3
