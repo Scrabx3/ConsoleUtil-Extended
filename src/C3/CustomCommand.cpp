@@ -51,7 +51,7 @@ namespace C3
 
 	std::string CustomFunction::ParseHelpString() const
 	{
-		auto ret = std::format("{}{}:", name, !help.empty() ? ": " + help : "");
+		auto ret = std::format("{}{}", name, !help.empty() ? ": " + help : "");
 		for (const auto& arg : args) {
 			ret += "\n\t\t";
 			ret += arg.ParseHelpString();
