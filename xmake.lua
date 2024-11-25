@@ -123,7 +123,7 @@ target(PROJECT_NAME)
             print("Warning: GamePath not defined. Skipping script compilation.")
         end
         if mod_folder and has_config("copy_to_papyrus") then
-            local SkyrimPath = path.join(mod_folder, "MfgFix NG")
+            local SkyrimPath = path.join(mod_folder, "CustomConsole")
             os.cp("dist/*", SkyrimPath)
         else
             print("Warning: SkyrimPath not defined. Skipping post-build copy.")
