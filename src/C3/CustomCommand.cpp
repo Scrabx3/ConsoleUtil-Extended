@@ -53,7 +53,7 @@ namespace C3
 	{
 		auto ret = std::format("{}{}:", name, !help.empty() ? ": " + help : "");
 		for (const auto& arg : args) {
-			ret += "\n\t";
+			ret += "\n\t\t";
 			ret += arg.ParseHelpString();
 		}
 		return ret;
