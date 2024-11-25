@@ -4,45 +4,52 @@ namespace Papyrus::Events
 {
 	bool ConsoleCommand_Filter::Apply(const RE::BSFixedString& a_cmd, const RE::TESObjectREFR* a_target) const
 	{
-		const auto matchCmd = filterCmd.empty() || (partialMatch ? a_cmd.contains(filterCmd) : a_cmd == filterCmd);
-		const auto matchRef = !filterRef || filterRef == a_target;
-    return matchCmd && matchRef;
+		const auto matchCmd = filterCmd.empty() || (partialMatch ? a_cmd.contains(filterCmd) : a_cmd == RE::BSFixedString{ filterCmd });
+		const auto matchRef = !filterRef || a_target && filterRef == a_target->GetFormID();
+		return matchCmd && matchRef;
 	}
 
 	bool ConsoleCommand_Filter::Load(SKSE::SerializationInterface* a_intfc)
 	{
-    std::string cmd{};
-		if (!stl::read_string(a_intfc, cmd))
+		// filterCmd
+		size_t size;
+		if (!a_intfc->ReadRecordData(size))
 			return false;
-		filterCmd = cmd;
-		if (!a_intfc->ReadRecordData(partialMatch))
+		filterCmd.resize(size);
+		if (!a_intfc->ReadRecordData(filterCmd.data(), static_cast<uint32_t>(size)))
 			return false;
+		// partialMatch
+		uint32_t partially;
+		if (!a_intfc->ReadRecordData(partially))
+			return false;
+		partialMatch = partially != 0;
+		// filterRef
 		RE::FormID formid;
 		if (!a_intfc->ReadRecordData(formid))
 			return false;
 		if (formid > 0) {
-			if (!a_intfc->ResolveFormID(formid, formid))
-				return false;
-			filterRef = RE::TESForm::LookupByID(formid)->As<RE::TESObjectREFR>();
-			if (!filterRef) {
-				logger::warn("Failed to resolve form id ({})", formid);
+			if (!a_intfc->ResolveFormID(formid, formid)) {
+				logger::warn("Failed to resolve formID: {:X}", formid);
 				return false;
 			}
+			filterRef = formid;
 		} else {
-			filterRef = nullptr;
+			filterRef = 0;
 		}
 		return true;
 	}
 
 	bool ConsoleCommand_Filter::Save(SKSE::SerializationInterface* a_intfc) const
 	{
-		return stl::write_string(a_intfc, filterCmd) && a_intfc->WriteRecordData(partialMatch) && a_intfc->WriteRecordData(filterRef ? filterRef->formID : 0);
+		return a_intfc->WriteRecordData(filterCmd.size()) &&
+					 a_intfc->WriteRecordData(filterCmd.data(), static_cast<uint32_t>(filterCmd.size())) &&
+					 a_intfc->WriteRecordData(static_cast<uint32_t>(partialMatch)) &&
+					 a_intfc->WriteRecordData(filterRef);
 	}
 
 	bool ConsoleCommand_Filter::operator<(const ConsoleCommand_Filter& a_rhs) const
 	{
-		using svtie = std::tuple<std::string_view, const RE::TESObjectREFR*>;
-		return svtie{ filterCmd, filterRef } < svtie{ a_rhs.filterCmd, a_rhs.filterRef };
+		return std::tie(filterCmd, filterRef, partialMatch) < std::tie(a_rhs.filterCmd, a_rhs.filterRef, a_rhs.partialMatch);
 	}
 
 	void EventManager::Save(SKSE::SerializationInterface* a_intfc, std::uint32_t a_version)

@@ -2,14 +2,15 @@
 
 #include "RegistrationMapConditional.h"
 #include "Util/Singleton.h"
+#include "Util/StringUtil.h"
 
 namespace Papyrus::Events
 {
 	struct ConsoleCommand_Filter
 	{
 		ConsoleCommand_Filter() = default;
-		ConsoleCommand_Filter(const RE::TESObjectREFR* a_ref, const RE::BSFixedString& a_filter, bool a_partialMatch) :
-			filterRef(a_ref), filterCmd(a_filter), partialMatch(a_partialMatch) {}
+		ConsoleCommand_Filter(const RE::TESObjectREFR* a_ref, const std::string& a_filter, bool a_partialMatch) :
+			filterRef(a_ref ? a_ref->GetFormID() : 0), filterCmd(StringUtil::CastLower(a_filter)), partialMatch(a_partialMatch) {}
 		~ConsoleCommand_Filter() = default;
 
 		bool Apply(const RE::BSFixedString& a_cmd, const RE::TESObjectREFR* a_target) const;
@@ -17,8 +18,8 @@ namespace Papyrus::Events
 		bool Save(SKSE::SerializationInterface* a_intfc) const;
 		bool operator<(const ConsoleCommand_Filter& a_rhs) const;
 
-		const RE::TESObjectREFR* filterRef{ nullptr };
-		RE::BSFixedString filterCmd{ "" };
+		RE::FormID filterRef{ 0 };
+		std::string filterCmd{ "" };
 		bool partialMatch{ false };
 	};
   
@@ -42,14 +43,14 @@ namespace Papyrus::Events
 
 	struct ConsoleCommand
 	{
-#define REGISTER(SUFFIX, TYPE)                                                                                                                  \
-	static bool RegisterForConsoleCommand##SUFFIX(STATICARGS, TYPE obj, RE::BSFixedString filter, bool partialMatch, RE::TESObjectREFR* a_target) \
-	{                                                                                                                                             \
-		if (!obj) {                                                                                                                                 \
-			a_vm->TraceStack("obj is none", a_stackID);                                                                                               \
-			return false;                                                                                                                             \
-		}                                                                                                                                           \
-		return EventManager::GetSingleton()->_ConsoleCommand.Register(obj, ConsoleCommand_Filter{ a_target, filter, partialMatch });                \
+#define REGISTER(SUFFIX, TYPE)                                                                                                            \
+	static bool RegisterForConsoleCommand##SUFFIX(STATICARGS, TYPE obj, std::string filter, bool partialMatch, RE::TESObjectREFR* a_target) \
+	{                                                                                                                                       \
+		if (!obj) {                                                                                                                           \
+			a_vm->TraceStack("obj is none", a_stackID);                                                                                         \
+			return false;                                                                                                                       \
+		}                                                                                                                                     \
+		return EventManager::GetSingleton()->_ConsoleCommand.Register(obj, ConsoleCommand_Filter{ a_target, filter, partialMatch });          \
 	}
 
 		REGISTER(, RE::TESForm*);
@@ -58,16 +59,12 @@ namespace Papyrus::Events
 #undef REGISTER
 
 #define UNREGISTER(SUFFIX, TYPE)                                                                                              \
-	static void UnregisterForConsoleCommand##SUFFIX(STATICARGS, TYPE obj, RE::BSFixedString a_cmd, RE::TESObjectREFR* a_target) \
+	static void UnregisterForConsoleCommand##SUFFIX(STATICARGS, TYPE obj, std::string a_cmd, RE::TESObjectREFR* a_target) \
 	{                                                                                                                           \
 		if (!obj) {                                                                                                               \
 			a_vm->TraceStack("obj is none", a_stackID);                                                                             \
 			return;                                                                                                                 \
-		}                                                                                                                         \
-		EventManager::GetSingleton()->_ConsoleCommand.Unregister(obj, [=](const ConsoleCommand_Filter& a_filter) {                \
-			return a_filter.filterRef == a_target && a_filter.filterCmd == a_cmd;                                                    \
-		});                                                                                                                       \
-	}
+		} EventManager::GetSingleton()->_ConsoleCommand.Unregister(obj, { a_target, a_cmd, true });		EventManager::GetSingleton()->_ConsoleCommand.Unregister(obj, { a_target, a_cmd, false }); }
 
 		UNREGISTER(, RE::TESForm*);
 		UNREGISTER(_Alias, RE::BGSBaseAlias*);

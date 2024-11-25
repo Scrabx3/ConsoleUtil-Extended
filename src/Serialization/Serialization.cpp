@@ -15,6 +15,7 @@ namespace Serialization
 		func(a_intfc);
 
 #undef SAVE
+		logger::info("Finished Saving Data");
 	}
 
 	void Serializer::LoadCallback(SKSE::SerializationInterface* a_intfc)
@@ -35,6 +36,7 @@ namespace Serialization
 				// break;
 			// }
 		}
+		logger::info("Finished Loading Data");
 	}
 
 	void Serializer::RevertCallback(SKSE::SerializationInterface* a_intfc)

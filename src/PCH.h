@@ -74,26 +74,6 @@ namespace stl
 		write_vfunc<F, 0, T>();
 	}
 
-	inline bool read_string(SKSE::SerializationInterface* a_intfc, std::string& a_str)
-	{
-		std::size_t size = 0;
-		if (!a_intfc->ReadRecordData(size)) {
-			return false;
-		}
-		a_str.resize(size);
-		if (!a_intfc->ReadRecordData(a_str.data(), static_cast<std::uint32_t>(size))) {
-			return false;
-		}
-		return true;
-	}
-
-	template <class S>
-	inline bool write_string(SKSE::SerializationInterface* a_intfc, const S& a_str)
-	{
-		std::size_t size = a_str.length() + 1;
-		return a_intfc->WriteRecordData(size) && a_intfc->WriteRecordData(a_str.data(), static_cast<std::uint32_t>(size));
-	}
-
 	[[nodiscard]] constexpr std::string_view safe_string(const char* a_str) noexcept
 	{
 		return a_str ? a_str : "";
