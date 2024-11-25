@@ -18,7 +18,7 @@ namespace Papyrus::Events
 		{}
 		~ConsoleCommand_Filter() = default;
 
-		bool Apply(const C3::ConsoleCommand& a_cmd) const { return consoleCmd.ContainedBy(a_cmd, partialMatch); }
+		bool Apply(const C3::ConsoleCommand& a_cmd) const { return consoleCmd.ContainedBy(a_cmd, !partialMatch); }
 		bool Load(SKSE::SerializationInterface* a_intfc);
 		bool Save(SKSE::SerializationInterface* a_intfc) const;
 		bool operator<(const ConsoleCommand_Filter& a_rhs) const;
