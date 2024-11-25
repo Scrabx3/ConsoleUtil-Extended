@@ -57,7 +57,7 @@ namespace C3
 			if (part.empty()) {
 				continue;
 			}
-			Argument arg{};
+			ConsoleArgument arg{};
 			if (part.starts_with("-")) {
 				const auto name = part;
 				if (++it == parts.end()) {
@@ -69,22 +69,20 @@ namespace C3
 			std::string partStr{ part };
 			if (StringUtil::IsNumericString(partStr)) {
 				if (part.find('.') != std::string::npos) {
-					arg.type = Argument::Type::Float;
-					arg.value.floating = std::stof(partStr);
+					arg.type = Type::Float;
 				} else {
-					arg.type = Argument::Type::Integer;
-					arg.value.integer = std::stoi(partStr);
+					arg.type = Type::Int;
 				}
 			} else {
-				arg.type = Argument::Type::String;
-				arg.value.string = strdup(partStr.data());
+				arg.type = Type::String;
 			}
+			arg.value = StringUtil::CastLower(partStr.data());
 			cmd.arguments.push_back(arg);
 		}
 		return cmd;
 	}
 
-	bool Argument::ContainedBy(const Argument& a_rhs, bool exact) const
+	bool ConsoleArgument::ContainedBy(const ConsoleArgument& a_rhs, bool exact) const
 	{
 		if (exact) {
 			return *this == a_rhs;
@@ -94,29 +92,29 @@ namespace C3
 			return false;
 		}
 		switch (type) {
-		case Type::Integer:
-			return value.integer == a_rhs.value.integer;
+		case Type::Int:
+			return std::stoi(value) == std::stoi(a_rhs.value);
 		case Type::Float:
-			return value.floating == a_rhs.value.floating;
+			return std::stof(value) == std::stof(a_rhs.value);
 		case Type::String:
-			return _stricmp(value.string, a_rhs.value.string) == 0;
+			return exact ? a_rhs.value == value : a_rhs.value.contains(value);
 		default:
 			return true;
 		}
 	}
 
-	bool Argument::operator==(const Argument& a_rhs) const
+	bool ConsoleArgument::operator==(const ConsoleArgument& a_rhs) const
 	{
 		if (name != a_rhs.name || type != a_rhs.type) {
 			return false;
 		}
 		switch (type) {
-		case Type::Integer:
-			return value.integer == a_rhs.value.integer;
+		case Type::Int:
+      return std::stoi(value) == std::stoi(a_rhs.value);
 		case Type::Float:
-			return value.floating == a_rhs.value.floating;
+      return std::stof(value) == std::stof(a_rhs.value);
 		case Type::String:
-			return _stricmp(value.string, a_rhs.value.string) == 0;
+      return value == a_rhs.value;
 		default:
 			return true;
 		}

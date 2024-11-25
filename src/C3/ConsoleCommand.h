@@ -1,36 +1,23 @@
 #pragma once
 
+#include "ArgumentType.h"
+
 namespace C3
 {
-	struct Argument
+	struct ConsoleArgument
 	{
-		enum class Type
-		{
-			None = 0,
-			Integer,
-			Float,
-			String,
-		};
-
-		union Value
-		{
-			int integer;
-			float floating;
-			const char* string;
-		};
-
 		RE::BSFixedString name{};
 		Type type{ Type::None };
-		Value value{ 0 };
+		std::string value{ "" };
 
-		bool ContainedBy(const Argument& a_rhs, bool exact) const;
-		bool operator==(const Argument& a_rhs) const;
+		bool ContainedBy(const ConsoleArgument& a_rhs, bool exact) const;
+		bool operator==(const ConsoleArgument& a_rhs) const;
 	};
 
 	struct ConsoleCommand
 	{
 		RE::BSFixedString name{};
-		std::vector<Argument> arguments{};
+		std::vector<ConsoleArgument> arguments{};
 		RE::FormID target{ 0 };
 
 		bool ContainedBy(const ConsoleCommand& a_rhs, bool exact) const;
