@@ -63,8 +63,10 @@ namespace C3
 			}
 			ConsoleArgument arg{};
 			if (part.starts_with("-")) {
-				const auto name = part;
-				if (++it == parts.end()) {
+				arg.name = part;
+				if (arg.name == "-h" || arg.name == "--help") {
+					continue;
+				} else if (++it == parts.end()) {
 					throw std::invalid_argument{ "Invalid argument: Flag argument specified but is missing value" };
 				}
 				part = *it;
