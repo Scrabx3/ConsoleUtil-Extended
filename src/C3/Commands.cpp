@@ -119,7 +119,10 @@ namespace C3
 				continue;
 			}
 			auto where = std::find_if(a_consoleArgs.begin() + n, a_consoleArgs.end(), [](const auto& arg) { return arg.name.empty(); });
-			if (where == a_consoleArgs.end() && !a_customArgs[i].required) {
+			if (where == a_consoleArgs.end()) {
+				if (a_customArgs[i].required) {
+					return false;
+				}
 				auto& obj = sortedArgs.emplace_back();
 				obj.type = a_customArgs[i].type;
 				obj.value = a_customArgs[i].defaultVal;
