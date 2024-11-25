@@ -97,7 +97,7 @@ namespace C3
 		}
 		switch (type) {
 		case Type::Int:
-			return std::stoi(value) == std::stoi(a_rhs.value);
+			return std::stoi(value, nullptr, 16) == std::stoi(a_rhs.value, nullptr, 16);
 		case Type::Float:
 			return std::stof(value) == std::stof(a_rhs.value);
 		case Type::String:
@@ -138,11 +138,16 @@ namespace C3
 		if (target != 0 && target != a_rhs.target) {
 			return false;
 		}
-		for (const auto& arg : a_rhs.arguments) {
-			if (std::ranges::none_of(arguments, [&](const auto& a) { return a.ContainedBy(arg, exact); })) {
-				return false;
-			}
-		}
+    try {
+      for (const auto& arg : arguments) {
+        if (std::ranges::none_of(a_rhs.arguments, [&](const auto& a) { return a.ContainedBy(arg, exact); })) {
+          return false;
+        }
+      }
+    } catch (const std::exception& e) {
+      logger::error("Error comparing arguments: {}", e.what());
+      return false;
+    }
 		return true;
 	}
 }	 // namespace C3
