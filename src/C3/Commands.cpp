@@ -193,7 +193,6 @@ namespace C3
 
 	void Commands::Print(const std::string& a_str) const
 	{
-		logger::info("{}", a_str);
 		SKSE::GetTaskInterface()->AddTask([a_str = std::move(a_str)]() { Utility::PrintConsole(a_str); });
 	}
 

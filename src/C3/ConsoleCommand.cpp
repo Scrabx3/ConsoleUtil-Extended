@@ -13,14 +13,12 @@ namespace C3
 		while (i < a_cmd.size()) {
 			if (a_cmd[i] == ' ' && !inQuotes) {
 				if (n != i) {
-          logger::info("Adding part: {}", a_cmd.substr(n, i - n));
 					parts.emplace_back(a_cmd.substr(n, i - n));
 				}
 				n = i + 1;
 			} else if (a_cmd[i] == '"') {
 				inQuotes = !inQuotes;
 				if (!inQuotes) {
-          logger::info("Adding part: {}", a_cmd.substr(n, i - n));
 					parts.emplace_back(a_cmd.substr(n, i - n));
 					n = i + 1;
 				} else {
@@ -30,7 +28,6 @@ namespace C3
 			i++;
 		}
 		if (n < i) {
-      logger::info("Adding part: {}", a_cmd.substr(n, i - n));
 			parts.emplace_back(a_cmd.substr(n, i - n));
 		}
 		ConsoleCommand cmd{};
@@ -43,9 +40,9 @@ namespace C3
 			if (arg1.front() == "player") {
 				cmd.target = 0x14;
 			} else {
-				cmd.target = Utility::FormFromString(arg1.front());
+				cmd.target = Utility::FormFromString(arg1.front(), 16);
 				if (!cmd.target) {
-					cmd.target = Utility::FormFromString(arg1.front(), 16);
+					cmd.target = Utility::FormFromString(arg1.front(), 10);
 				}
 			}
 			if (!cmd.target) {
@@ -87,7 +84,7 @@ namespace C3
 			arg.value = StringUtil::CastLower(part);
 			cmd.arguments.push_back(arg);
 		}
-    logger::info("Parsed command: {} with {} args and target: {:X}", cmd.name, cmd.arguments.size(), cmd.target);
+    logger::info("Parsed command: {} with {} args and target: 0x{:X}", cmd.name, cmd.arguments.size(), cmd.target);
 		return cmd;
 	}
 
