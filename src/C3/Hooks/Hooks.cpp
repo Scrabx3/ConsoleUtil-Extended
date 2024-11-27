@@ -58,7 +58,11 @@ namespace C3
 		SKSE::AllocTrampoline(1 << 4);
 		auto& trampoline = SKSE::GetTrampoline();
 
-		REL::Relocation<std::uintptr_t> hookPoint{ REL::RelocationID(52065, 52952), REL::VariantOffset(0xE2, 0x52, 0xE2) };
+		REL::Relocation<std::uintptr_t> hookPoint;
+		if (REL::Module::GetRuntime() != REL::Module::Runtime::VR)
+			hookPoint = decltype(hookPoint){ REL::RelocationID(52065, 52952), REL::VariantOffset(0xE2, 0x52, 0xE2) };
+		else
+			hookPoint = 0x90E1F0 + 0xE2;
 		_CompileAndRun = trampoline.write_call<5>(hookPoint.address(), CompileAndRun);
 
 		logger::info("Installed hooks");
