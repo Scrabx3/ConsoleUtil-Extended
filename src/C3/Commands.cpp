@@ -30,7 +30,9 @@ namespace C3
 				if (std::ranges::find_if(_commands, [&](const auto& a) { return &a != &command && a.GetName() == command.GetName(); }) != _commands.end()) {
 					logger::error("Command {} is already registered as a command.", command.GetName());
 					continue;
-				} else if (std::ranges::find_if(_commands, [&](const auto& a) { return &a != &command && a.GetAlias() == command.GetAlias(); }) != _commands.end()) {
+				} else if (std::ranges::find_if(_commands, [&](const auto& a) {
+										 return &a != &command && !a.GetAlias().empty() && a.GetAlias() == command.GetAlias();
+									 }) != _commands.end()) {
 					logger::error("Command Alias {} is already registered as an alias.", command.GetAlias());
 					continue;
 				}

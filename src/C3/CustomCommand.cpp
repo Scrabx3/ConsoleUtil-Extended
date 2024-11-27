@@ -41,7 +41,7 @@ namespace C3
 				if (args[i].name == last.name) {
 					const auto err = std::format("Argument name collision: {}", last.name);
 					throw std::runtime_error{ err.c_str() };
-				} else if (args[i].alias == last.alias) {
+				} else if (!last.alias.empty() && args[i].alias == last.alias) {
 					const auto err = std::format("Argument alias collision: {}", last.alias);
 					throw std::runtime_error{ err.c_str() };
 				}
@@ -72,11 +72,10 @@ namespace C3
 		for (const auto& funcNode : a_node["subs"]) {
 			auto& func = functions.emplace_back(funcNode);
 			for (size_t i = 0; i < functions.size() - 1; i++) {
-				const auto& f = functions[i];
-				if (f.name == func.name) {
+				if (functions[i].name == func.name) {
 					const auto err = std::format("Function name collision: {}", func.name);
 					throw std::runtime_error{ err.c_str() };
-				} else if (f.alias == func.alias) {
+				} else if (!func.alias.empty() && functions[i].alias == func.alias) {
 					const auto err = std::format("Function alias collision: {}", func.alias);
 					throw std::runtime_error{ err.c_str() };
 				}
