@@ -232,7 +232,7 @@ namespace C3
       }
       break;
     case Type::Bool:
-      ret.SetBool(a_consoleArg.value == "1" || a_consoleArg.value == "true" || a_consoleArg.value == "TRUE");
+      ret.SetBool(a_consoleArg.value == "1" || a_consoleArg.value == "true");
       break;
     case Type::Float:
 			if (a_consoleArg.type == Type::Int || a_consoleArg.type == Type::Float) {
