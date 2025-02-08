@@ -47,6 +47,16 @@ namespace C3
 
 	bool Commands::Run(const ConsoleCommand& a_cmd) const
 	{
+		constexpr std::array cue_commands{
+			"ConsoleUtilExtended"sv,
+			"CustomConsole"sv,
+			"CUE"sv,
+			"CC"sv
+		};
+		if (std::ranges::find_if(cue_commands, [&](const auto& a) { return a == a_cmd.name; }) != cue_commands.end()) {
+			PrintAvailableCommands();
+			return true;
+		}
 		auto cmd = std::ranges::find_if(_commands, [&](const auto& a) {
 			return a.GetName() == a_cmd.name || a.GetAlias() == a_cmd.name;
 		});
@@ -191,6 +201,16 @@ namespace C3
 		}
 	}
 
+	void Commands::PrintAvailableCommands() const
+	{
+		std::string ret = "Available commands:\n";
+		for (const auto& cmd : _commands) {
+			const auto aliasName = !cmd.GetAlias().empty() ? std::format(" ({})", cmd.GetAlias()) : "";
+			ret += std::format("\t{}{}\n", cmd.GetName(), aliasName);
+		}
+		Print(ret);
+	}
+
 	void Commands::Print(const std::string& a_str) const
 	{
 		SKSE::GetTaskInterface()->AddTask([a_str = std::move(a_str)]() { Utility::PrintConsole(a_str); });
@@ -287,8 +307,8 @@ namespace C3
 				}
 				ret.SetObject(std::move(object));
         break;
-      }
-    default:
+			}
+		default:
       logger::error("Unknown argument type: {}", magic_enum::enum_name(a_cstmArg.type));
       ret.SetNone();
       break;

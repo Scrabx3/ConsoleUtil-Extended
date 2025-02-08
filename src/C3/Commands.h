@@ -21,6 +21,7 @@ namespace C3
 		bool AlignArguments(const std::vector<CustomArgument>& a_customArgs, std::vector<ConsoleArgument>& a_args) const;
 		std::string VarToString(const RE::BSScript::Variable& a_var, uint32_t a_recurse) const;
 
+		void PrintAvailableCommands() const;
 		void Print(const std::string& a_str) const;
 		void PrintErr(std::string a_str) const;
 
