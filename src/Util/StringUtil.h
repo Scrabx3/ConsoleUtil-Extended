@@ -29,15 +29,20 @@ namespace StringUtil
   
 	inline std::vector<std::string_view> StringSplit(const std::string_view& a_view, const std::string_view& a_delim)
 	{
-		namespace views = std::ranges::views;
-		return a_view | views::split(a_delim) | views::transform([](auto&& subrange) {
-			auto word = std::string_view(&*subrange.begin(), std::ranges::distance(subrange));
-			while (!word.empty() && std::isspace(word.front()))
-				word.remove_prefix(1);
-			while (!word.empty() && std::isspace(word.back()))
-				word.remove_suffix(1);
-			return word;
-		}) | views::filter([](auto&& word) { return !word.empty(); }) | std::ranges::to<std::vector>();
+		std::vector<std::string_view> result;
+		size_t start = 0;
+		const auto step = [&](size_t count) {
+			auto word = a_view.substr(start, count);
+			while (!word.empty() && std::isspace(word.front())) word.remove_prefix(1);
+			while (!word.empty() && std::isspace(word.back())) word.remove_suffix(1);
+			if (!word.empty())
+				result.push_back(word);
+		};
+		for (size_t end; (end = a_view.find(a_delim, start)) != std::string_view::npos; start = end + a_delim.length()) {
+			step(end - start);
+		}
+		step(std::string_view::npos);
+		return result;
 	}
 
 	inline std::vector<std::string> StringSplitToOwned(const std::string_view& a_view, const std::string_view& a_delim)
