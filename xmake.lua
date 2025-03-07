@@ -95,8 +95,8 @@ target(PROJECT_NAME)
         local game_folder = os.getenv("XSE_TES5_GAME_PATH")
         if game_folder then
             local compiler_folder = path.join(game_folder, "Papyrus Compiler/PapyrusCompiler.exe")
-            local script_source = "dist/source/scripts"
-            local script_output = "dist/scripts"
+            local script_source = "dist/Source/Scripts"
+            local script_output = "dist/Scripts"
             local flags_file = path.join(game_folder, "Data/Source/Scripts/TESV_Papyrus_Flags.flg")
             os.execv(compiler_folder, { script_source, 
                 "-i=" .. script_source .. ";" .. path.join(game_folder, "Data/Source/Scripts"),
@@ -125,7 +125,7 @@ target(PROJECT_NAME)
         if not has_config("copy_to_papyrus") then
             print("copy_to_papyrus not set. Skipping post-build copy.")
         elseif mod_folder then
-            local SkyrimPath = path.join(mod_folder, "ConsoleUtilSSE Extended")
+            local SkyrimPath = path.join(mod_folder, target:basename())
             os.cp("dist/*", SkyrimPath)
         else
             print("Warning: SkyrimPath not defined. Skipping post-build copy.")
