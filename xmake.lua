@@ -122,7 +122,9 @@ target(PROJECT_NAME)
         else
             print("Warning: GamePath not defined. Skipping script compilation.")
         end
-        if mod_folder and has_config("copy_to_papyrus") then
+        if not has_config("copy_to_papyrus") then
+            print("copy_to_papyrus not set. Skipping post-build copy.")
+        elseif mod_folder then
             local SkyrimPath = path.join(mod_folder, "ConsoleUtilSSE Extended")
             os.cp("dist/*", SkyrimPath)
         else
