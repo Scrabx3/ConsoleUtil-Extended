@@ -18,7 +18,7 @@ namespace C3
 		bool Run(const ConsoleCommand& a_command) const;
 
 	private:
-		bool AlignArguments(const std::vector<CustomArgument>& a_customArgs, std::vector<ConsoleArgument>& a_args) const;
+		bool AlignArguments(const std::vector<CustomArgument>& a_customArgs, std::vector<ConsoleArgument>& a_args, bool a_hasSelection) const;
 		std::string VarToString(const RE::BSScript::Variable& a_var, uint32_t a_recurse) const;
 
 		void PrintAvailableCommands() const;

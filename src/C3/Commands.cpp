@@ -1,8 +1,8 @@
 #include "Commands.h"
 
 #include "Util/FormLookup.h"
-#include "Util/StringUtil.h"
 #include "Util/Misc.h"
+#include "Util/StringUtil.h"
 
 namespace C3
 {
@@ -66,8 +66,7 @@ namespace C3
 		logger::info("Running command {}", cmd->GetName());
 
 		if (a_cmd.arguments.empty() || std::any_of(a_cmd.arguments.begin(), a_cmd.arguments.end(), [&](const auto& arg) { return arg.name == "-h" || arg.name == "--help"; })) {
-			const auto msg = cmd->ParseHelpString();
-			Print(msg);
+			Print(cmd->ParseHelpString());
 			return true;
 		}
 		const auto& funcName = a_cmd.arguments[0].value;
@@ -77,7 +76,7 @@ namespace C3
 			return true;
 		}
 		std::vector<ConsoleArgument> arguments{ a_cmd.arguments.begin() + 1, a_cmd.arguments.end() };
-		if (!AlignArguments(func->args, arguments)) {
+		if (!AlignArguments(func->args, arguments, a_cmd.target != 0)) {
 			PrintErr("Invalid arguments");
 			return true;
 		}
@@ -105,9 +104,10 @@ namespace C3
 		return true;
 	}
 
-	bool Commands::AlignArguments(const std::vector<CustomArgument>& a_customArgs, std::vector<ConsoleArgument>& a_consoleArgs) const
+	bool Commands::AlignArguments(const std::vector<CustomArgument>& a_customArgs, std::vector<ConsoleArgument>& a_consoleArgs, bool a_hasSelection) const
 	{
 		if (a_consoleArgs.size() > a_customArgs.size()) {
+            PrintErr(std::format("Too many arguments, expected {} but got {}", a_customArgs.size(), a_consoleArgs.size()));
 			return false;
 		}
 		std::vector<int> sorted(a_customArgs.size(), -1);
@@ -119,6 +119,7 @@ namespace C3
 			}
 			auto where = std::ranges::find_if(a_customArgs, [&](const auto& arg) { return arg.name == it.name || arg.alias == it.name; });
 			if (where == a_customArgs.end()) {
+                PrintErr(std::format("Unknown argument name: {}", it.name));
 				return false;
 			}
 			sorted[std::distance(a_customArgs.begin(), where)] = static_cast<int>(i);
@@ -132,7 +133,8 @@ namespace C3
 			}
 			auto where = std::find_if(a_consoleArgs.begin() + n, a_consoleArgs.end(), [](const auto& arg) { return arg.name.empty(); });
 			if (where == a_consoleArgs.end()) {
-				if (a_customArgs[i].required) {
+				if (a_customArgs[i].required && (!a_customArgs[i].selected || (a_customArgs[i].selected && !a_hasSelection))) {
+					PrintErr(std::format("Missing required argument at {}", i));
 					return false;
 				}
 				auto& obj = sortedArgs.emplace_back();
@@ -244,34 +246,34 @@ namespace C3
 		RE::BSScript::Variable ret{};
 		switch (a_cstmArg.type) {
 		case Type::Int:
-      if (a_consoleArg.type == Type::Int) {
+			if (a_consoleArg.type == Type::Int) {
 				ret.SetSInt(std::stoi(a_consoleArg.value));
 			} else {
 				logger::error("Failed to parse int argument: {}", a_consoleArg.value);
 				ret.SetSInt(0);
-      }
-      break;
-    case Type::Bool:
-      ret.SetBool(a_consoleArg.value == "1" || a_consoleArg.value == "true");
-      break;
-    case Type::Float:
+			}
+			break;
+		case Type::Bool:
+			ret.SetBool(a_consoleArg.value == "1" || a_consoleArg.value == "true");
+			break;
+		case Type::Float:
 			if (a_consoleArg.type == Type::Int || a_consoleArg.type == Type::Float) {
 				ret.SetFloat(std::stof(a_consoleArg.value));
 			} else {
-        logger::error("Failed to parse float argument: {}", a_consoleArg.value);
-        ret.SetFloat(0.0f);
-      }
+				logger::error("Failed to parse float argument: {}", a_consoleArg.value);
+				ret.SetFloat(0.0f);
+			}
 			break;
-    case Type::String:
+		case Type::String:
 			ret.SetString(a_consoleArg.value);
 			break;
-    case Type::Object:
-      {
+		case Type::Object:
+			{
 				const auto rawLower = StringUtil::CastLower(a_cstmArg.rawType);
-        RE::TESForm* form;
+				RE::TESForm* form;
 				if (a_consoleArg.value == "none") {
 					ret.SetNone();
-          break;
+					break;
 				} else if (a_consoleArg.value == "player" && rawLower == "actor") {
 					form = RE::PlayerCharacter::GetSingleton();
 				} else if (auto tmp = Utility::FormFromString<RE::TESForm>(a_consoleArg.value)) {
@@ -281,24 +283,24 @@ namespace C3
 					form = a_target;
 				} else {
 					logger::error("Failed to parse object argument: {}", a_consoleArg.value);
-          ret.SetNone();
-          break;
+					ret.SetNone();
+					break;
 				}
 				assert(form);
-        auto object = Script::GetScriptObject(form, a_cstmArg.rawType.c_str());
+				auto object = Script::GetScriptObject(form, a_cstmArg.rawType.c_str());
 				if (!object)
-          object = Script::GetScriptObject(form, "form");
-        if (!object) {
+					object = Script::GetScriptObject(form, "form");
+				if (!object) {
 					logger::error("Failed to get script object for form: {} / 0x{:X}", a_consoleArg.value, form->formID);
 					ret.SetNone();
 					break;
 				}
 				assert(object);
-        // why god why?
-        auto type = object->GetTypeInfo();
-        while (type && StringUtil::CastLower(type->GetName()) != rawLower) {
-          type = type->GetParent();
-        }
+				// why god why?
+				auto type = object->GetTypeInfo();
+				while (type && StringUtil::CastLower(type->GetName()) != rawLower) {
+					type = type->GetParent();
+				}
 				if (type && type != object->type.get() && StringUtil::CastLower(type->GetName()) == rawLower) {
 					logger::info("Replacing object type from {} to {}", object->type->GetName(), type->GetName());
 					auto pair = std::make_pair(object, Script::TypePtr{ object->type });
@@ -306,12 +308,12 @@ namespace C3
 					object->type = RE::BSTSmartPointer{ type };
 				}
 				ret.SetObject(std::move(object));
-        break;
+				break;
 			}
 		default:
-      logger::error("Unknown argument type: {}", magic_enum::enum_name(a_cstmArg.type));
-      ret.SetNone();
-      break;
+			logger::error("Unknown argument type: {}", magic_enum::enum_name(a_cstmArg.type));
+			ret.SetNone();
+			break;
 		}
 		return ret;
 	}
