@@ -9,11 +9,12 @@ namespace Papyrus::Functions
 	void PrintMessage(RE::StaticFunctionTag*, std::string a_str) { Utility::PrintConsole(a_str); }
 
 	void ExecuteCommandTarget(STATICARGS, RE::BSFixedString command, RE::TESObjectREFR* target)
-  {
-    if (command.empty()) {
-      TRACESTACK("command is empty");
-      return;
+	{
+		if (command.empty()) {
+			TRACESTACK("command is empty");
+			return;
 		}
+		logger::info("Executing command: '{}' on {:X}", command.c_str(), target ? target->formID : 0);
 		const auto scriptFactory = RE::IFormFactory::GetConcreteFormFactoryByType<RE::Script>();
 		const auto script = scriptFactory ? scriptFactory->Create() : nullptr;
 		if (script) {
@@ -24,7 +25,7 @@ namespace Papyrus::Functions
 	}
 	void ExecuteCommand(STATICARGS, RE::BSFixedString command) { ExecuteCommandTarget(a_vm, a_stackID, nullptr, command, RE::Console::GetSelectedRef().get()); }
 
-	RE::TESObjectREFR* GetSelectedReference(RE::StaticFunctionTag*)	{		return RE::Console::GetSelectedRef().get();	}
+	RE::TESObjectREFR* GetSelectedReference(RE::StaticFunctionTag*) { return RE::Console::GetSelectedRef().get(); }
 	void SetSelectedReference(RE::StaticFunctionTag*, RE::TESObjectREFR* a_reference)
 	{
 		if (auto console = RE::UI::GetSingleton()->GetMenu<RE::Console>()) {
@@ -54,5 +55,5 @@ namespace Papyrus::Functions
 		REGISTERFUNC(GetVersion, "ConsoleUtil", false);
 
 		return true;
-  }
+	}
 }	 // namespace Papyrus::Functions
