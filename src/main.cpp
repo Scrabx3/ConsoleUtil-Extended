@@ -26,7 +26,7 @@ struct MenuOpenCloseEvent :
 static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
 {
 	switch (message->type) {
-	case SKSE::MessagingInterface::kPostLoadGame:
+	case SKSE::MessagingInterface::kDataLoaded:
 		{
 			const auto ui = RE::UI::GetSingleton();
 			ui->AddEventSink(MenuOpenCloseEvent::GetSingleton());
