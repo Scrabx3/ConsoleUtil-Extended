@@ -19,7 +19,17 @@ namespace Papyrus::Functions
 		const auto script = scriptFactory ? scriptFactory->Create() : nullptr;
 		if (script) {
 			script->SetCommand(command);
-			script->CompileAndRun(target);
+
+			// In some (all?) cases when a custom console command is invoked through this API
+			// it fails, even though it works from the console. Testing suggests it was
+			// bypassing the hook of Script::CompileAndRun_Impl().
+			// By creating a public: wrapper around the hook implementation, and mimicing
+			// the implementation of Script::CompileAndRunPublic(TESObjectREFR* , COMPILER_NAME)
+			// we are able to achieve running even custom commands through the API.
+			RE::ScriptCompiler compiler;
+			C3::Hooks::CompileAndRunPublic(script, &compiler, RE::COMPILER_NAME::kSystemWindowCompiler, target);
+			//script->CompileAndRun(target);
+
 			delete script;
 		}
 	}

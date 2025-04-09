@@ -24,6 +24,11 @@ namespace C3
 		return msgs;
 	}
 
+	void Hooks::CompileAndRunPublic(RE::Script* a_script, RE::ScriptCompiler* a_compiler, RE::COMPILER_NAME a_name, RE::TESObjectREFR* a_targetRef)
+	{
+		Hooks::CompileAndRun(a_script, a_compiler, a_name, a_targetRef);
+	}
+
 	void Hooks::CompileAndRun(RE::Script* a_script, RE::ScriptCompiler* a_compiler, RE::COMPILER_NAME a_name, RE::TESObjectREFR* a_targetRef)
 	{
 		auto cmd = a_script->GetCommand();

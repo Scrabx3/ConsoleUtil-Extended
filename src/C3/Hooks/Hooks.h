@@ -10,6 +10,7 @@ namespace C3
 		static void Install();
 		static std::vector<RE::BSFixedString> GetMessages(size_t n);
 
+		static void CompileAndRunPublic(RE::Script* a_script, RE::ScriptCompiler* a_compiler, RE::COMPILER_NAME a_name, RE::TESObjectREFR* a_targetRef);
 	private:
 		static void CompileAndRun(RE::Script* a_script, RE::ScriptCompiler* a_compiler, RE::COMPILER_NAME a_name, RE::TESObjectREFR* a_targetRef);
 		inline static REL::Relocation<decltype(CompileAndRun)> _CompileAndRun;
