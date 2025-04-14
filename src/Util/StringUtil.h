@@ -2,7 +2,9 @@
 
 namespace StringUtil
 {
-#define STR_TRANSFORM(f) std::transform(str.cbegin(), str.cend(), str.begin(), [](int c) { return f(c); });
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#define STR_TRANSFORM(f) std::transform(str.cbegin(), str.cend(), str.begin(), [](const auto& c) { return f(c); });
 
 	template <class T>
 	constexpr void ToLower(T& str)
@@ -26,6 +28,7 @@ namespace StringUtil
 	}
 
 #undef STR_TRANSFORM
+#pragma warning(pop)
   
 	inline std::vector<std::string_view> StringSplit(const std::string_view& a_view, const std::string_view& a_delim)
 	{

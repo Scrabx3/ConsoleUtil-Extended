@@ -51,9 +51,9 @@ target(PROJECT_NAME)
     add_deps("commonlibsse-ng")
     add_rules("commonlibsse-ng.plugin", {
         name = PROJECT_NAME,
-        author = "Scrab Joséline",
+        author = "Scrab",
         description = "Framework to register new, custom console commands via Papyrus using .yaml config files."
-        })
+    })
 
     -- Source files
     set_pcxxheader("src/PCH.h")
@@ -125,7 +125,7 @@ target(PROJECT_NAME)
         if not has_config("copy_to_papyrus") then
             print("copy_to_papyrus not set. Skipping post-build copy.")
         elseif mod_folder then
-            local SkyrimPath = path.join(mod_folder, target:basename())
+            local SkyrimPath = path.join(mod_folder, "ConsoleUtil Extended")
             os.cp("dist/*", SkyrimPath)
         else
             print("Warning: SkyrimPath not defined. Skipping post-build copy.")
