@@ -12,20 +12,26 @@ namespace C3
 	{
 		using CallbackFunc = std::function<void(const RE::BSScript::Variable&)>;
 		constexpr static std::string_view DIRECTORY_PATH{ "Data/SKSE/CustomConsole"sv };
+		constexpr static inline size_t MAX_MSG_HISTORY{ 128 };
 
 	public:
 		void Initialize();
-		bool Run(const ConsoleCommand& a_command) const;
+		bool ProcessCommand(const std::string& a_cmd, RE::TESObjectREFR* a_targetRef = nullptr);
+		std::vector<RE::BSFixedString> GetMessages(size_t n);
 
 	private:
+		bool Run(const ConsoleCommand& a_command) const;
 		bool AlignArguments(const std::vector<CustomArgument>& a_customArgs, std::vector<ConsoleArgument>& a_args, bool a_hasSelection) const;
 		std::string VarToString(const RE::BSScript::Variable& a_var, uint32_t a_recurse) const;
 
 		void PrintAvailableCommands() const;
 		void Print(const std::string& a_str) const;
 		void PrintErr(std::string a_str) const;
-
+		
 		std::vector<CustomCommand> _commands{};
+		std::array<RE::BSFixedString, MAX_MSG_HISTORY> _MsgHistory{};
+		decltype(_MsgHistory)::iterator _MsgHead = _MsgHistory.begin();
+		decltype(_MsgHistory)::iterator _MsgTail = _MsgHistory.begin();
 	};
 	
 	class VmCallback : public RE::BSScript::IStackCallbackFunctor

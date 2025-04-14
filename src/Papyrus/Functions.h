@@ -1,6 +1,6 @@
 #pragma once
 
-#include "C3/Hooks/Hooks.h"
+#include "C3/Commands.h"
 #include "Util/Misc.h"
 
 namespace Papyrus::Functions
@@ -14,13 +14,20 @@ namespace Papyrus::Functions
 			TRACESTACK("command is empty");
 			return;
 		}
-		logger::info("Executing command: '{}' on {:X}", command.c_str(), target ? target->formID : 0);
+		const auto targetRefId = target ? target->GetFormID() : 0;
+		if (C3::Commands::GetSingleton()->ProcessCommand(command.c_str(), target)) {
+			logger::info("Processed C3 Papyrus Command: {}, 0x{:X}", command, targetRefId);
+			return;
+		}
 		const auto scriptFactory = RE::IFormFactory::GetConcreteFormFactoryByType<RE::Script>();
 		const auto script = scriptFactory ? scriptFactory->Create() : nullptr;
 		if (script) {
+			logger::info("Running Papyrus Command: {}, 0x{:X}", command, targetRefId);
 			script->SetCommand(command);
 			script->CompileAndRun(target);
 			delete script;
+		} else {
+			logger::error("Failed to create script for command: {}, 0x{:X}", command, targetRefId);
 		}
 	}
 	void ExecuteCommand(STATICARGS, RE::BSFixedString command) { ExecuteCommandTarget(a_vm, a_stackID, nullptr, command, RE::Console::GetSelectedRef().get()); }
@@ -33,7 +40,7 @@ namespace Papyrus::Functions
 		}
 	}
 
-	std::vector<RE::BSFixedString> GetConsoleMessages(RE::StaticFunctionTag*, int32_t n) { return C3::Hooks::GetMessages(n); }
+	std::vector<RE::BSFixedString> GetConsoleMessages(RE::StaticFunctionTag*, int32_t n) { return C3::Commands::GetSingleton()->GetMessages(n); }
 	RE::BSFixedString ReadMessage(RE::StaticFunctionTag*) { return RE::ConsoleLog::GetSingleton()->lastMessage; }
 
 	int32_t GetVersion(RE::StaticFunctionTag*) { return 777; }

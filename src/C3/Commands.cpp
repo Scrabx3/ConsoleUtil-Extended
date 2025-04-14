@@ -1,5 +1,6 @@
 #include "Commands.h"
 
+#include "Papyrus/Events.h"
 #include "Util/FormLookup.h"
 #include "Util/Misc.h"
 #include "Util/StringUtil.h"
@@ -43,6 +44,31 @@ namespace C3
 			}
 		}
 		logger::info("Loaded {} commands", _commands.size());
+	}
+
+	bool Commands::ProcessCommand(const std::string& a_consoleCmd, RE::TESObjectREFR* a_targetRef)
+	{
+		*_MsgHead = a_consoleCmd;
+		if (++_MsgHead == _MsgHistory.end()) {
+			_MsgHead = _MsgHistory.begin();
+		}
+		if (_MsgHead == _MsgTail) {
+			if (++_MsgTail == _MsgHistory.end()) {
+				_MsgTail = _MsgHistory.begin();
+			}
+		}
+		const auto targetRefId = a_targetRef ? a_targetRef->GetFormID() : 0;
+		try {
+			const auto cc = ParseConsoleCommand(a_consoleCmd, targetRefId);
+			Papyrus::Events::EventManager::GetSingleton()->_ConsoleCommand.QueueEvent(
+					[=](const Papyrus::Events::ConsoleCommand_Filter& a_filter) { return a_filter.Apply(cc); },
+					a_consoleCmd, a_targetRef);
+
+			return Run(cc);
+		} catch (const std::exception& e) {
+			logger::error("Unrecognized command: {}, 0x{:X}. Error: {}", a_consoleCmd, targetRefId, e.what());
+		}
+		return false;
 	}
 
 	bool Commands::Run(const ConsoleCommand& a_cmd) const
@@ -337,5 +363,23 @@ namespace C3
 			type.reset();
 		}
 		_typeOverrides.clear();
+	}
+
+	std::vector<RE::BSFixedString> Commands::GetMessages(size_t n)
+	{
+		std::vector<RE::BSFixedString> msgs{};
+		msgs.reserve(n);
+
+		auto iter = _MsgTail;
+		for (size_t i = 0; i < n; ++i) {
+			msgs.push_back(*iter);
+			if (++iter == _MsgHistory.end()) {
+				iter = _MsgHistory.begin();
+			}
+			if (iter == _MsgHead) {
+				break;
+			}
+		}
+		return msgs;
 	}
 }	 // namespace C3
