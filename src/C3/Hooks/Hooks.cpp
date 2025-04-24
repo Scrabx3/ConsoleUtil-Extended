@@ -6,7 +6,7 @@ namespace C3
 {
 	void Hooks::CompileAndRun(RE::Script* a_script, RE::ScriptCompiler* a_compiler, RE::COMPILER_NAME a_name, RE::TESObjectREFR* a_targetRef)
 	{
-		const auto cmd = a_script->GetName();
+		const auto cmd = a_script->GetCommand();
 		const auto targetRefId = a_targetRef ? a_targetRef->GetFormID() : 0;
 		if (Commands::GetSingleton()->ProcessCommand(cmd, a_targetRef)) {
 			logger::info("Processed Command: {}, 0x{:X}", cmd, targetRefId);
